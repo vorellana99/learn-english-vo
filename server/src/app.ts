@@ -6,7 +6,12 @@ import { buildInsights, buildSession } from "./insights.js";
 import { findScenario, scenarios } from "./scenarios.js";
 import { createClaudeTutor, type Tutor } from "./tutor.js";
 
-const today = () => new Date().toISOString().slice(0, 10);
+// `tz` is the client's Date#getTimezoneOffset (minutes behind UTC), so days roll over at local midnight.
+const tzOf = (v: unknown) => {
+  const n = Number(v);
+  return Number.isFinite(n) && Math.abs(n) <= 14 * 60 ? n : 0;
+};
+const today = (tz = 0) => new Date(Date.now() - tz * 60_000).toISOString().slice(0, 10);
 const addDays = (date: string, days: number) =>
   new Date(Date.parse(date) + days * 86_400_000).toISOString().slice(0, 10);
 
@@ -21,17 +26,18 @@ export function createApp(db: DB, tutor?: Tutor) {
       lastActive: string | null;
     };
 
-  app.get("/api/profile", (_req, res) => {
+  app.get("/api/profile", (req, res) => {
+    const date = today(tzOf(req.query.tz));
     const p = profile();
-    const { n: dueCount } = db.prepare("SELECT COUNT(*) AS n FROM card_state WHERE due <= ?").get(today()) as { n: number };
-    res.json({ ...p, ...levelFor(p.xp), levels: LEVELS, dueCount, reviewedToday: p.lastActive === today() });
+    const { n: dueCount } = db.prepare("SELECT COUNT(*) AS n FROM card_state WHERE due <= ?").get(date) as { n: number };
+    res.json({ ...p, ...levelFor(p.xp), levels: LEVELS, dueCount, reviewedToday: p.lastActive === date });
   });
 
   // Adaptive session: due cards first, then new cards weighted toward your weak topics and
   // past mistakes, sized by `mode` and by how well the last week went.
   app.get("/api/session", (req, res) => {
     const mode = (["quick", "normal", "long"] as const).find((m) => m === req.query.mode) ?? "normal";
-    res.json(buildSession(db, mode, levelFor(profile().xp).level, today()));
+    res.json(buildSession(db, mode, levelFor(profile().xp).level, today(tzOf(req.query.tz))));
   });
 
   app.get("/api/insights", (req, res) => {
@@ -54,7 +60,7 @@ export function createApp(db: DB, tutor?: Tutor) {
       .prepare("SELECT ease, interval_days AS intervalDays, reps, lapses FROM card_state WHERE card_id = ?")
       .get(cardId) as typeof initialState | undefined;
     const next = schedule(row ?? initialState, rating as Rating);
-    const date = today();
+    const date = today(tzOf(req.body?.tz));
     db.transaction(() => {
       db.prepare(
         `INSERT INTO card_state (card_id, ease, interval_days, reps, lapses, due) VALUES (?, ?, ?, ?, ?, ?)

@@ -115,3 +115,24 @@ describe("adaptive session and insights", () => {
     server.close();
   });
 });
+
+describe("local day handling", () => {
+  it("rolls the streak day over at the client's local midnight", async () => {
+    const db = openDb(":memory:");
+    const server = createApp(db).listen(0);
+    const { port } = server.address() as { port: number };
+    const base = `http://127.0.0.1:${port}`;
+    const review = (tz: number) =>
+      fetch(`${base}/api/review`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ cardId: 1, rating: 2, tz }),
+      });
+    await review(-840); // UTC+14: local date is the day after UTC (or the same later in the day)
+    const localDate = new Date(Date.now() + 840 * 60_000).toISOString().slice(0, 10);
+    expect(db.prepare("SELECT last_active AS d FROM profile").get()).toEqual({ d: localDate });
+    const profile = await (await fetch(`${base}/api/profile?tz=-840`)).json();
+    expect(profile.reviewedToday).toBe(true);
+    server.close();
+  });
+});

@@ -23,7 +23,9 @@ async function json<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export const getProfile = () => fetch("/api/profile").then((r) => json<Profile>(r));
+const tz = () => new Date().getTimezoneOffset();
+
+export const getProfile = () => fetch(`/api/profile?tz=${tz()}`).then((r) => json<Profile>(r));
 export type Mode = "quick" | "normal" | "long";
 export interface Plan {
   mode: Mode;
@@ -32,7 +34,7 @@ export interface Plan {
   reason: string;
 }
 export const getSession = (mode: Mode) =>
-  fetch(`/api/session?mode=${mode}`).then((r) => json<{ cards: Card[]; plan: Plan }>(r));
+  fetch(`/api/session?mode=${mode}&tz=${tz()}`).then((r) => json<{ cards: Card[]; plan: Plan }>(r));
 
 export interface Insights {
   learned: number;
@@ -44,12 +46,12 @@ export interface Insights {
   activeDays: { day: string; reviews: number }[];
 }
 export const getInsights = () =>
-  fetch(`/api/insights?tz=${new Date().getTimezoneOffset()}`).then((r) => json<Insights>(r));
+  fetch(`/api/insights?tz=${tz()}`).then((r) => json<Insights>(r));
 export const postReview = (cardId: number, rating: number) =>
   fetch("/api/review", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ cardId, rating }),
+    body: JSON.stringify({ cardId, rating, tz: tz() }),
   }).then((r) => json<Profile>(r));
 
 export interface Scenario {
