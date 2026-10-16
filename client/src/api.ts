@@ -70,11 +70,11 @@ export interface Correction {
 
 export const getScenarios = () => fetch("/api/scenarios").then((r) => json<{ scenarios: Scenario[] }>(r));
 
-export async function postChat(scenarioId: string, message: string, conversationId?: number) {
+export async function postChat(scenarioId: string, message: string, conversationId?: number, spoken = false) {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ scenarioId, message, conversationId }),
+    body: JSON.stringify({ scenarioId, message, conversationId, spoken }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? `Request failed: ${res.status}`);

@@ -52,7 +52,10 @@ describe("api", () => {
 describe("chat api", () => {
   it("stores conversation, mistakes and creates review cards", async () => {
     const db = openDb(":memory:");
-    const tutor = async () => ({
+    const seen: (boolean | undefined)[] = [];
+    const tutor = async (input: { spoken?: boolean }) => {
+      seen.push(input.spoken);
+      return {
       reply: "Nice! Where did you work before?",
       correction: {
         corrected: "I have three years of experience.",
@@ -60,7 +63,8 @@ describe("chat api", () => {
         explanation_es: "Usa 'have' para experiencia.",
         errors: [{ category: "grammar" as const, original: "I has three years", fixed: "I have three years of experience." }],
       },
-    });
+    };
+    };
     const server = createApp(db, tutor).listen(0);
     const { port } = server.address() as { port: number };
     const post = (body: unknown) =>
@@ -72,7 +76,8 @@ describe("chat api", () => {
     const r = await post({ scenarioId: "interview-intro", message: "I has three years" });
     const body = await r.json();
     expect(body.reply).toContain("Where");
-    const r2 = await post({ scenarioId: "interview-intro", conversationId: body.conversationId, message: "Again" });
+    const r2 = await post({ scenarioId: "interview-intro", conversationId: body.conversationId, message: "Again", spoken: true });
+    expect(seen).toEqual([false, true]);
     expect(r2.status).toBe(200);
     expect((await post({ scenarioId: "nope", message: "x" })).status).toBe(400);
     expect((await post({ scenarioId: "interview-intro", conversationId: 999, message: "x" })).status).toBe(404);

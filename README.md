@@ -26,6 +26,14 @@ A variable already exported in your shell takes precedence over `.env`.
 The model defaults to `claude-opus-5-5` (override with `CLAUDE_MODEL`). Every message you write is corrected
 (in Spanish) and each mistake is saved and turned into a review card. Server-side refusal fallbacks are enabled.
 
+## Voice
+
+In a conversation mission, press 🎤 to speak in English (browser speech recognition, `en-US`) and 🔈 to hear
+replies read aloud (toggle "Read replies aloud" for hands-free practice). Dictated messages show a clarity score
+and tell the tutor the text came from speech so it ignores punctuation and flags likely mispronunciations.
+Voice input works in Chrome, Edge and Safari; Firefox only gets the text chat. Audio is processed by the browser
+vendor's speech service, not by this app.
+
 ## Roadmap
 
 1. **Phase 1 (done):** spaced-repetition flashcards (290 cards A1→B2: work, tech, AI, interview, daily life), XP, streak, level progress A1 → B2, SQLite persistence.

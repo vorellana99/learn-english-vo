@@ -182,3 +182,13 @@ button small { opacity: 0.7; margin-left: 6px; font-weight: 500; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+.chat-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bubble { position: relative; }
+.speak { position: absolute; right: -34px; bottom: 4px; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); font-size: 0.8rem; opacity: 0.7; padding: 0; }
+.speak:hover { opacity: 1; }
+.clarity { display: block; margin-top: 4px; opacity: 0.8; }
+.mic { width: 48px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); font-size: 1.1rem; flex: none; }
+.mic.live { background: rgba(251, 113, 133, 0.2); border-color: var(--rose); color: var(--rose); animation: rec 1.2s ease-in-out infinite; }
+@keyframes rec { 50% { box-shadow: 0 0 0 8px rgba(251, 113, 133, 0); } 0% { box-shadow: 0 0 0 0 rgba(251, 113, 133, 0.5); } }
+@media (max-width: 520px) { .speak { right: -4px; bottom: -30px; } }

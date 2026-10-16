@@ -92,7 +92,7 @@ export function createApp(db: DB, tutor?: Tutor) {
   });
 
   app.post("/api/chat", async (req, res) => {
-    const { scenarioId, conversationId, message } = req.body ?? {};
+    const { scenarioId, conversationId, message, spoken } = req.body ?? {};
     const scenario = typeof scenarioId === "string" ? findScenario(scenarioId) : undefined;
     if (!scenario || typeof message !== "string" || !message.trim() || message.length > 1000) {
       res.status(400).json({ error: "valid scenarioId and message (max 1000 chars) are required" });
@@ -126,7 +126,7 @@ export function createApp(db: DB, tutor?: Tutor) {
 
     try {
       const level = levelFor(profile().xp).level;
-      const result = await tutor({ scenario, level, history, message: message.trim() });
+      const result = await tutor({ scenario, level, history, message: message.trim(), spoken: spoken === true });
       db.transaction(() => {
         const insertMsg = db.prepare("INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)");
         if (conversationId === undefined) insertMsg.run(convId, "assistant", scenario.opener);

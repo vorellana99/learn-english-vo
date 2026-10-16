@@ -28,6 +28,8 @@ export interface TutorInput {
   level: string;
   history: { role: "user" | "assistant"; content: string }[];
   message: string;
+  /** True when the message came from speech recognition. */
+  spoken?: boolean;
 }
 
 export type Tutor = (input: TutorInput) => Promise<TutorResult>;
@@ -35,13 +37,16 @@ export type Tutor = (input: TutorInput) => Promise<TutorResult>;
 const model = () => process.env.CLAUDE_MODEL ?? "claude-opus-5-5";
 
 export function createClaudeTutor(client = new Anthropic()): Tutor {
-  return async ({ scenario, level, history, message }) => {
+  return async ({ scenario, level, history, message, spoken }) => {
     const system = [
       scenario.roleplay,
       `The user is a Spanish speaker learning English, CEFR level ${level}, preparing for tech jobs in the USA.`,
       "Keep your reply short (1-3 sentences) and use simple English matching the user's level. Stay in character and keep the conversation going.",
+      spoken
+        ? "The user's latest message was dictated with speech recognition: ignore capitalization and punctuation, and treat odd words as possible mispronunciations (mention a likely mispronunciation in explanation_es when it seems clear)."
+        : "",
       "Also correct the user's latest message: `corrected` is the minimally fixed sentence, `natural` is how a native speaker would say it, `explanation_es` is a brief explanation in Spanish of the mistakes (empty string if there were none), and `errors` lists each mistake (empty if none). If the message is already correct, return it unchanged in `corrected` and `natural`.",
-    ].join("\n");
+    ].filter(Boolean).join("\n");
 
     const response = await client.beta.messages.parse({
       model: model(),
