@@ -14,12 +14,14 @@ npm test
 
 ## AI chat setup
 
-Export your key before starting (the server does not read `.env` files):
+Create a `.env` file in the repo root (it is git-ignored; the server loads it on start):
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...
+cp .env.example .env   # then put your ANTHROPIC_API_KEY in it
 npm run dev
 ```
+
+A variable already exported in your shell takes precedence over `.env`.
 
 The model defaults to `claude-opus-5-5` (override with `CLAUDE_MODEL`). Every message you write is corrected
 (in Spanish) and each mistake is saved and turned into a review card. Server-side refusal fallbacks are enabled.
