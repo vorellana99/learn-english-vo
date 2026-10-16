@@ -34,6 +34,25 @@ export function openDb(file = process.env.DB_FILE ?? "learn-english.db"): DB {
       streak INTEGER NOT NULL DEFAULT 0,
       last_active TEXT
     );
+    CREATE TABLE IF NOT EXISTS conversations (
+      id INTEGER PRIMARY KEY,
+      scenario_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS messages (
+      id INTEGER PRIMARY KEY,
+      conversation_id INTEGER NOT NULL REFERENCES conversations(id),
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS mistakes (
+      id INTEGER PRIMARY KEY,
+      category TEXT NOT NULL,
+      original TEXT NOT NULL,
+      fixed TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
     INSERT OR IGNORE INTO profile (id) VALUES (1);
   `);
   const insert = db.prepare("INSERT OR IGNORE INTO cards (front, back, level, topic) VALUES (?, ?, ?, ?)");

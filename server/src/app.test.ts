@@ -47,3 +47,37 @@ describe("api", () => {
     server.close();
   });
 });
+
+describe("chat api", () => {
+  it("stores conversation, mistakes and creates review cards", async () => {
+    const db = openDb(":memory:");
+    const tutor = async () => ({
+      reply: "Nice! Where did you work before?",
+      correction: {
+        corrected: "I have three years of experience.",
+        natural: "I've got three years of experience.",
+        explanation_es: "Usa 'have' para experiencia.",
+        errors: [{ category: "grammar" as const, original: "I has three years", fixed: "I have three years of experience." }],
+      },
+    });
+    const server = createApp(db, tutor).listen(0);
+    const { port } = server.address() as { port: number };
+    const post = (body: unknown) =>
+      fetch(`http://127.0.0.1:${port}/api/chat`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const r = await post({ scenarioId: "interview-intro", message: "I has three years" });
+    const body = await r.json();
+    expect(body.reply).toContain("Where");
+    const r2 = await post({ scenarioId: "interview-intro", conversationId: body.conversationId, message: "Again" });
+    expect(r2.status).toBe(200);
+    expect((await post({ scenarioId: "nope", message: "x" })).status).toBe(400);
+    expect((await post({ scenarioId: "interview-intro", conversationId: 999, message: "x" })).status).toBe(404);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM mistakes").get()).toEqual({ n: 2 });
+    expect(db.prepare("SELECT COUNT(*) AS n FROM cards WHERE topic = 'mistakes'").get()).toEqual({ n: 1 });
+    expect(db.prepare("SELECT COUNT(*) AS n FROM messages").get()).toEqual({ n: 5 });
+    server.close();
+  });
+});

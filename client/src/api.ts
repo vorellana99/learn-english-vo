@@ -29,3 +29,30 @@ export const postReview = (cardId: number, rating: number) =>
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ cardId, rating }),
   }).then((r) => json<Profile>(r));
+
+export interface Scenario {
+  id: string;
+  title: string;
+  description: string;
+  opener: string;
+}
+
+export interface Correction {
+  corrected: string;
+  natural: string;
+  explanation_es: string;
+  errors: { category: string; original: string; fixed: string }[];
+}
+
+export const getScenarios = () => fetch("/api/scenarios").then((r) => json<{ scenarios: Scenario[] }>(r));
+
+export async function postChat(scenarioId: string, message: string, conversationId?: number) {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ scenarioId, message, conversationId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? `Request failed: ${res.status}`);
+  return data as { conversationId: number; reply: string; correction: Correction };
+}

@@ -2,12 +2,14 @@ import express from "express";
 import type { DB } from "./db.js";
 import { initialState, schedule, type Rating } from "./srs.js";
 import { levelFor, nextStreak, XP_PER_RATING } from "./progress.js";
+import { findScenario, scenarios } from "./scenarios.js";
+import { createClaudeTutor, type Tutor } from "./tutor.js";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const addDays = (date: string, days: number) =>
   new Date(Date.parse(date) + days * 86_400_000).toISOString().slice(0, 10);
 
-export function createApp(db: DB) {
+export function createApp(db: DB, tutor?: Tutor) {
   const app = express();
   app.use(express.json());
 
@@ -75,6 +77,76 @@ export function createApp(db: DB) {
     })();
     const p = profile();
     res.json({ ...p, ...levelFor(p.xp), nextDueInDays: next.intervalDays });
+  });
+
+  app.get("/api/scenarios", (_req, res) => {
+    res.json({ scenarios: scenarios.map(({ id, title, description, opener }) => ({ id, title, description, opener })) });
+  });
+
+  app.get("/api/mistakes", (_req, res) => {
+    res.json({
+      byCategory: db
+        .prepare("SELECT category, COUNT(*) AS count FROM mistakes GROUP BY category ORDER BY count DESC")
+        .all(),
+    });
+  });
+
+  app.post("/api/chat", async (req, res) => {
+    const { scenarioId, conversationId, message } = req.body ?? {};
+    const scenario = typeof scenarioId === "string" ? findScenario(scenarioId) : undefined;
+    if (!scenario || typeof message !== "string" || !message.trim() || message.length > 1000) {
+      res.status(400).json({ error: "valid scenarioId and message (max 1000 chars) are required" });
+      return;
+    }
+    if (!tutor) {
+      if (!process.env.ANTHROPIC_API_KEY) {
+        res.status(503).json({ error: "ANTHROPIC_API_KEY is not configured on the server" });
+        return;
+      }
+      tutor = createClaudeTutor();
+    }
+
+    let convId: number;
+    let history: { role: "user" | "assistant"; content: string }[];
+    if (conversationId === undefined) {
+      convId = Number(db.prepare("INSERT INTO conversations (scenario_id) VALUES (?)").run(scenario.id).lastInsertRowid);
+      history = [{ role: "assistant", content: scenario.opener }];
+    } else {
+      const conv = db.prepare("SELECT id FROM conversations WHERE id = ? AND scenario_id = ?").get(conversationId, scenario.id);
+      if (!conv) {
+        res.status(404).json({ error: "conversation not found" });
+        return;
+      }
+      convId = conversationId;
+      history = db
+        .prepare("SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY id")
+        .all(convId) as typeof history;
+      if (!history.length || history[0].role !== "assistant") history.unshift({ role: "assistant", content: scenario.opener });
+    }
+
+    try {
+      const level = levelFor(profile().xp).level;
+      const result = await tutor({ scenario, level, history, message: message.trim() });
+      db.transaction(() => {
+        const insertMsg = db.prepare("INSERT INTO messages (conversation_id, role, content) VALUES (?, ?, ?)");
+        if (conversationId === undefined) insertMsg.run(convId, "assistant", scenario.opener);
+        insertMsg.run(convId, "user", message.trim());
+        insertMsg.run(convId, "assistant", result.reply);
+        for (const e of result.correction.errors) {
+          db.prepare("INSERT INTO mistakes (category, original, fixed) VALUES (?, ?, ?)").run(e.category, e.original, e.fixed);
+          // Each mistake becomes a review card (front: the fixed phrase, back: what was wrong).
+          db.prepare("INSERT OR IGNORE INTO cards (front, back, level, topic) VALUES (?, ?, ?, 'mistakes')").run(
+            e.fixed,
+            `Antes escribiste: "${e.original}" (${e.category})`,
+            level,
+          );
+        }
+      })();
+      res.json({ conversationId: convId, reply: result.reply, correction: result.correction });
+    } catch (err) {
+      console.error(err);
+      res.status(502).json({ error: "The tutor is unavailable right now, try again" });
+    }
   });
 
   return app;

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { getProfile, type Profile } from "./api";
 import { Review } from "./Review";
+import { Chat } from "./Chat";
 
 export function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  const [chatting, setChatting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
@@ -37,10 +39,20 @@ export function App() {
             refresh();
           }}
         />
+      ) : chatting ? (
+        <Chat
+          onClose={() => {
+            setChatting(false);
+            refresh();
+          }}
+        />
       ) : (
-        <button className="primary" onClick={() => setReviewing(true)}>
-          {profile.reviewedToday ? "Practice more" : "Start today's session (5 min)"}
-        </button>
+        <div className="actions">
+          <button className="primary" onClick={() => setReviewing(true)}>
+            {profile.reviewedToday ? "Practice more" : "Start today's session (5 min)"}
+          </button>
+          <button onClick={() => setChatting(true)}>Conversation mission 💬</button>
+        </div>
       )}
     </main>
   );
