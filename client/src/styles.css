@@ -28,3 +28,13 @@ button.primary { background: #4f46e5; color: #fff; border: 0; }
 .correction small { display: block; opacity: 0.85; }
 .composer { display: flex; gap: 8px; margin-bottom: 8px; }
 .composer input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccd; font-size: 1rem; }
+.modes { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.modes button.active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+.plan { display: block; margin-bottom: 6px; color: #555; }
+.dashboard { margin-top: 24px; }
+.dashboard h3 { margin-bottom: 6px; }
+.spark { display: flex; align-items: flex-end; gap: 3px; height: 50px; margin: 8px 0; }
+.spark div { flex: 1; background: #4f46e5; border-radius: 2px; min-height: 2px; }
+.hrow { display: flex; align-items: center; gap: 8px; }
+.hrow span:first-child { width: 90px; font-size: 0.85rem; }
+.hrow .bar { flex: 1; margin: 4px 0; }

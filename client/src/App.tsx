@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { getProfile, type Profile } from "./api";
+import { getProfile, type Mode, type Profile } from "./api";
 import { Review } from "./Review";
 import { Chat } from "./Chat";
+import { Dashboard } from "./Dashboard";
 
 export function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  const [mode, setMode] = useState<Mode>("normal");
   const [chatting, setChatting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +35,7 @@ export function App() {
       <div className="bar"><div style={{ width: `${pct}%` }} /></div>
       {reviewing ? (
         <Review
+          mode={mode}
           onProgress={setProfile}
           onDone={() => {
             setReviewing(false);
@@ -47,12 +50,22 @@ export function App() {
           }}
         />
       ) : (
-        <div className="actions">
-          <button className="primary" onClick={() => setReviewing(true)}>
-            {profile.reviewedToday ? "Practice more" : "Start today's session (5 min)"}
-          </button>
-          <button onClick={() => setChatting(true)}>Conversation mission 💬</button>
-        </div>
+        <>
+          <div className="modes">
+            {(["quick", "normal", "long"] as const).map((m) => (
+              <button key={m} className={m === mode ? "active" : ""} onClick={() => setMode(m)}>
+                {{ quick: "Quick · 3 min", normal: "Normal · 8 min", long: "Long · 15+ min" }[m]}
+              </button>
+            ))}
+          </div>
+          <div className="actions">
+            <button className="primary" onClick={() => setReviewing(true)}>
+              {profile.reviewedToday ? "Practice more" : "Start today's session"}
+            </button>
+            <button onClick={() => setChatting(true)}>Conversation mission 💬</button>
+          </div>
+          <Dashboard />
+        </>
       )}
     </main>
   );

@@ -22,7 +22,27 @@ async function json<T>(res: Response): Promise<T> {
 }
 
 export const getProfile = () => fetch("/api/profile").then((r) => json<Profile>(r));
-export const getSession = () => fetch("/api/session").then((r) => json<{ cards: Card[] }>(r));
+export type Mode = "quick" | "normal" | "long";
+export interface Plan {
+  mode: Mode;
+  due: number;
+  new: number;
+  reason: string;
+}
+export const getSession = (mode: Mode) =>
+  fetch(`/api/session?mode=${mode}`).then((r) => json<{ cards: Card[]; plan: Plan }>(r));
+
+export interface Insights {
+  learned: number;
+  mastered: number;
+  totalCards: number;
+  weakCategories: { category: string; count: number }[];
+  weakTopics: { topic: string; reviews: number; struggleRate: number }[];
+  bestHour: number | null;
+  activeDays: { day: string; reviews: number }[];
+}
+export const getInsights = () =>
+  fetch(`/api/insights?tz=${new Date().getTimezoneOffset()}`).then((r) => json<Insights>(r));
 export const postReview = (cardId: number, rating: number) =>
   fetch("/api/review", {
     method: "POST",

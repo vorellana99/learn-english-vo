@@ -30,6 +30,7 @@ describe("api", () => {
     const base = `http://127.0.0.1:${port}`;
     const session = await (await fetch(`${base}/api/session`)).json();
     expect(session.cards.length).toBe(5);
+    expect(session.plan.mode).toBe("normal");
     const r = await fetch(`${base}/api/review`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -78,6 +79,35 @@ describe("chat api", () => {
     expect(db.prepare("SELECT COUNT(*) AS n FROM mistakes").get()).toEqual({ n: 2 });
     expect(db.prepare("SELECT COUNT(*) AS n FROM cards WHERE topic = 'mistakes'").get()).toEqual({ n: 1 });
     expect(db.prepare("SELECT COUNT(*) AS n FROM messages").get()).toEqual({ n: 5 });
+    server.close();
+  });
+});
+
+describe("adaptive session and insights", () => {
+  it("prioritizes mistake cards, respects level and mode size, and reports insights", async () => {
+    const db = openDb(":memory:");
+    db.prepare("INSERT INTO cards (front, back, level, topic) VALUES ('I has','x','A1','mistakes')").run();
+    const server = createApp(db).listen(0);
+    const { port } = server.address() as { port: number };
+    const get = async (path: string) => (await fetch(`http://127.0.0.1:${port}${path}`)).json();
+
+    const quick = await get("/api/session?mode=quick");
+    expect(quick.cards.length).toBe(3);
+    expect(quick.cards[0].topic).toBe("mistakes");
+    expect(quick.cards.every((c: { level: string }) => c.level === "A1")).toBe(true);
+    expect((await get("/api/session?mode=long")).plan.new).toBe(8);
+
+    // A week of failures shrinks the number of new cards.
+    const ids = quick.cards.map((c: { id: number }) => c.id);
+    const ins = db.prepare("INSERT INTO reviews (card_id, rating) VALUES (?, 0)");
+    for (let i = 0; i < 12; i++) ins.run(ids[0]);
+    expect((await get("/api/session?mode=normal")).plan.new).toBe(3);
+
+    db.prepare("INSERT INTO mistakes (category, original, fixed) VALUES ('tense','a','b')").run();
+    const insights = await get("/api/insights");
+    expect(insights.weakCategories[0].category).toBe("tense");
+    expect(insights.weakTopics[0].topic).toBe("mistakes");
+    expect(insights.bestHour).not.toBeNull();
     server.close();
   });
 });

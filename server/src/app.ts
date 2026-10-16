@@ -2,6 +2,7 @@ import express from "express";
 import type { DB } from "./db.js";
 import { initialState, schedule, type Rating } from "./srs.js";
 import { levelFor, nextStreak, XP_PER_RATING } from "./progress.js";
+import { buildInsights, buildSession } from "./insights.js";
 import { findScenario, scenarios } from "./scenarios.js";
 import { createClaudeTutor, type Tutor } from "./tutor.js";
 
@@ -25,24 +26,16 @@ export function createApp(db: DB, tutor?: Tutor) {
     res.json({ ...p, ...levelFor(p.xp), reviewedToday: p.lastActive === today() });
   });
 
-  // New cards (never seen) are introduced up to the limit; due cards come first.
+  // Adaptive session: due cards first, then new cards weighted toward your weak topics and
+  // past mistakes, sized by `mode` and by how well the last week went.
   app.get("/api/session", (req, res) => {
-    const newLimit = Math.min(Number(req.query.new ?? 5), 20);
-    const due = db
-      .prepare(
-        `SELECT c.id, c.front, c.back, c.level, c.topic FROM cards c
-         JOIN card_state s ON s.card_id = c.id WHERE s.due <= ? ORDER BY s.due`,
-      )
-      .all(today());
-    const fresh = db
-      .prepare(
-        `SELECT c.id, c.front, c.back, c.level, c.topic FROM cards c
-         WHERE c.id NOT IN (SELECT card_id FROM card_state)
-         ORDER BY CASE c.level WHEN 'A1' THEN 1 WHEN 'A2' THEN 2 WHEN 'B1' THEN 3 ELSE 4 END, c.id
-         LIMIT ?`,
-      )
-      .all(newLimit);
-    res.json({ cards: [...due, ...fresh] });
+    const mode = (["quick", "normal", "long"] as const).find((m) => m === req.query.mode) ?? "normal";
+    res.json(buildSession(db, mode, levelFor(profile().xp).level, today()));
+  });
+
+  app.get("/api/insights", (req, res) => {
+    const tz = Number(req.query.tz ?? 0);
+    res.json(buildInsights(db, Number.isFinite(tz) ? tz : 0));
   });
 
   app.post("/api/review", (req, res) => {

@@ -30,4 +30,4 @@ The model defaults to `claude-opus-5-5` (override with `CLAUDE_MODEL`). Every me
 
 1. **Phase 1 (done):** spaced-repetition flashcards, XP, streak, level progress A1 → B2, SQLite persistence.
 2. **Phase 2 (done):** AI roleplay chat (interview / standup) with corrections via the Claude API (`ANTHROPIC_API_KEY`).
-3. **Phase 3:** adaptive daily session from error history, progress dashboard.
+3. **Phase 3 (done):** adaptive daily session from error history, progress dashboard.
