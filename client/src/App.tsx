@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getProfile, type Mode, type Profile } from "./api";
 import { Review } from "./Review";
 import { Chat } from "./Chat";
+import { Interview } from "./Interview";
 import { Dashboard } from "./Dashboard";
 import { Hero } from "./Hero";
 import { Roadmap } from "./Roadmap";
@@ -9,7 +10,7 @@ import { StreakGoal, useInsights } from "./StreakGoal";
 import { SoundToggle } from "./SoundToggle";
 import { sound } from "./sound";
 
-type View = "home" | "review" | "chat";
+type View = "home" | "review" | "chat" | "interview";
 
 const MODES: { id: Mode; label: string; hint: string }[] = [
   { id: "quick", label: "Quick", hint: "3 min" },
@@ -88,12 +89,23 @@ export function App() {
                 </div>
                 <button className="primary alt" onClick={() => go("chat")}>Start a mission</button>
               </section>
+              <section className="card action wide-card">
+                <div className="action-head">
+                  <span className="emoji">🎯</span>
+                  <div>
+                    <h2>Mock interview</h2>
+                    <p className="muted">6 questions without interruptions, then a full report: score, CEFR estimate and better answers.</p>
+                  </div>
+                </div>
+                <button className="primary alt" onClick={() => go("interview")}>Start an interview</button>
+              </section>
             </div>
             <Dashboard data={insights} />
           </div>
         )}
         {profile && view === "review" && <Review mode={mode} level={profile.level} streak={profile.streak} onProgress={setProfile} onDone={home} />}
         {profile && view === "chat" && <Chat onClose={home} />}
+        {profile && view === "interview" && <Interview onClose={home} onProgress={refresh} />}
       </main>
     </div>
   );

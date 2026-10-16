@@ -5,6 +5,8 @@ import { LEVELS, levelFor, nextStreak, XP_PER_RATING } from "./progress.js";
 import { buildInsights, buildSession } from "./insights.js";
 import { findScenario, scenarios } from "./scenarios.js";
 import { createClaudeTutor, type Tutor } from "./tutor.js";
+import type { Evaluator } from "./evaluator.js";
+import { mountInterviews } from "./interviewRoutes.js";
 
 // `tz` is the client's Date#getTimezoneOffset (minutes behind UTC), so days roll over at local midnight.
 const tzOf = (v: unknown) => {
@@ -15,7 +17,7 @@ const today = (tz = 0) => new Date(Date.now() - tz * 60_000).toISOString().slice
 const addDays = (date: string, days: number) =>
   new Date(Date.parse(date) + days * 86_400_000).toISOString().slice(0, 10);
 
-export function createApp(db: DB, tutor?: Tutor) {
+export function createApp(db: DB, tutor?: Tutor, evaluator?: Evaluator) {
   const app = express();
   app.use(express.json());
 
@@ -148,6 +150,8 @@ export function createApp(db: DB, tutor?: Tutor) {
       res.status(502).json({ error: "The tutor is unavailable right now, try again" });
     }
   });
+
+  mountInterviews(app, db, today, tzOf, evaluator);
 
   return app;
 }

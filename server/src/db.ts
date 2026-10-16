@@ -53,6 +53,24 @@ export function openDb(file = process.env.DB_FILE ?? "learn-english.db"): DB {
       fixed TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS interviews (
+      id INTEGER PRIMARY KEY,
+      type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      overall INTEGER,
+      report TEXT,
+      xp_awarded INTEGER,
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finished_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS interview_turns (
+      id INTEGER PRIMARY KEY,
+      interview_id INTEGER NOT NULL REFERENCES interviews(id),
+      idx INTEGER NOT NULL,
+      question TEXT NOT NULL,
+      answer TEXT,
+      spoken INTEGER NOT NULL DEFAULT 0
+    );
     INSERT OR IGNORE INTO profile (id) VALUES (1);
   `);
   const insert = db.prepare("INSERT OR IGNORE INTO cards (front, back, level, topic) VALUES (?, ?, ?, ?)");

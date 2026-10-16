@@ -34,6 +34,13 @@ and tell the tutor the text came from speech so it ignores punctuation and flags
 Voice input works in Chrome, Edge and Safari; Firefox only gets the text chat. Audio is processed by the browser
 vendor's speech service, not by this app.
 
+## Mock interview
+
+Home → "Mock interview": 6 questions (behavioral, technical, system design, recruiter screen or a mix), answered in
+writing or by voice, with no feedback until the end. Claude then evaluates the whole transcript and returns an overall
+score, a CEFR estimate, five sub-scores, strengths and improvements (in Spanish), mistakes (saved as review cards) and a
+better answer for each question. XP is awarded once per interview (50 + 1.5 × score).
+
 ## Roadmap
 
 1. **Phase 1 (done):** spaced-repetition flashcards (290 cards A1→B2: work, tech, AI, interview, daily life), XP, streak, level progress A1 → B2, SQLite persistence.

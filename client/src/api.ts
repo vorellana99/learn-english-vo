@@ -80,3 +80,37 @@ export async function postChat(scenarioId: string, message: string, conversation
   if (!res.ok) throw new Error(data.error ?? `Request failed: ${res.status}`);
   return data as { conversationId: number; reply: string; correction: Correction };
 }
+
+export interface InterviewType {
+  id: string;
+  title: string;
+  description: string;
+}
+
+export interface Report {
+  overall: number;
+  cefr: string;
+  scores: { fluency: number; grammar: number; vocabulary: number; structure: number; professionalism: number };
+  summary_es: string;
+  strengths: string[];
+  improvements: string[];
+  mistakes: { category: string; original: string; fixed: string }[];
+  answers: { question: string; feedback_es: string; better_answer: string }[];
+}
+
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? `Request failed: ${res.status}`);
+  return data as T;
+}
+
+export const getInterviewTypes = () => fetch("/api/interview/types").then((r) => json<{ types: InterviewType[] }>(r));
+export const getInterviewHistory = () =>
+  fetch("/api/interview/history").then((r) => json<{ history: { id: number; type: string; overall: number; finishedAt: string }[]; best: number | null }>(r));
+export const startInterview = (type: string) =>
+  post<{ interviewId: number; index: number; total: number; question: string }>("/api/interview/start", { type });
+export const answerInterview = (id: number, answer: string, spoken: boolean) =>
+  post<{ done: boolean; index: number; total: number; question?: string }>(`/api/interview/${id}/answer`, { answer, spoken });
+export const finishInterview = (id: number) =>
+  post<{ report: Report; xpAwarded: number } & Profile>(`/api/interview/${id}/finish`, { tz: new Date().getTimezoneOffset() });
