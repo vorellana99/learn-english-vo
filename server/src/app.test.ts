@@ -108,6 +108,10 @@ describe("adaptive session and insights", () => {
     expect(insights.weakCategories[0].category).toBe("tense");
     expect(insights.weakTopics[0].topic).toBe("mistakes");
     expect(insights.bestHour).not.toBeNull();
+    expect(insights.activeDays.at(-1).reviews).toBe(12);
+    const profile = await get("/api/profile");
+    expect(profile.levels.length).toBe(4);
+    expect(profile.dueCount).toBe(0);
     server.close();
   });
 });

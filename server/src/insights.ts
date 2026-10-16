@@ -107,12 +107,14 @@ export function buildInsights(db: DB, tzOffsetMin: number) {
   const best = Math.max(...hours);
   const bestHour = best > 0 ? hours.indexOf(best) : null;
 
+  // Group by the viewer's local calendar day (SQLite date modifiers take "+N minutes").
+  const localShift = `${-tzOffsetMin} minutes`;
   const days = db
     .prepare(
-      `SELECT date(reviewed_at) AS day, COUNT(*) AS reviews FROM reviews
-       WHERE reviewed_at >= datetime('now', '-13 days') GROUP BY day ORDER BY day`,
+      `SELECT date(reviewed_at, ?) AS day, COUNT(*) AS reviews FROM reviews
+       WHERE reviewed_at >= datetime('now', '-15 days') GROUP BY day ORDER BY day`,
     )
-    .all() as { day: string; reviews: number }[];
+    .all(localShift) as { day: string; reviews: number }[];
 
   const counts = db
     .prepare(

@@ -1,7 +1,7 @@
 import express from "express";
 import type { DB } from "./db.js";
 import { initialState, schedule, type Rating } from "./srs.js";
-import { levelFor, nextStreak, XP_PER_RATING } from "./progress.js";
+import { LEVELS, levelFor, nextStreak, XP_PER_RATING } from "./progress.js";
 import { buildInsights, buildSession } from "./insights.js";
 import { findScenario, scenarios } from "./scenarios.js";
 import { createClaudeTutor, type Tutor } from "./tutor.js";
@@ -23,7 +23,8 @@ export function createApp(db: DB, tutor?: Tutor) {
 
   app.get("/api/profile", (_req, res) => {
     const p = profile();
-    res.json({ ...p, ...levelFor(p.xp), reviewedToday: p.lastActive === today() });
+    const { n: dueCount } = db.prepare("SELECT COUNT(*) AS n FROM card_state WHERE due <= ?").get(today()) as { n: number };
+    res.json({ ...p, ...levelFor(p.xp), levels: LEVELS, dueCount, reviewedToday: p.lastActive === today() });
   });
 
   // Adaptive session: due cards first, then new cards weighted toward your weak topics and

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getScenarios, postChat, type Correction, type Scenario } from "./api";
+import { sound } from "./sound";
 
 interface Turn {
   role: "user" | "assistant";
@@ -15,12 +16,18 @@ export function Chat({ onClose }: { onClose: () => void }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [turns, busy]);
 
   useEffect(() => {
     getScenarios().then((s) => setScenarios(s.scenarios)).catch((e: Error) => setError(e.message));
   }, []);
 
   const start = (s: Scenario) => {
+    sound.play("click");
     setScenario(s);
     setConversationId(undefined);
     setTurns([{ role: "assistant", text: s.opener }]);
@@ -32,10 +39,14 @@ export function Chat({ onClose }: { onClose: () => void }) {
     setInput("");
     setBusy(true);
     setError(null);
+    sound.play("send");
     setTurns((t) => [...t, { role: "user", text }]);
     try {
       const r = await postChat(scenario.id, text, conversationId);
       setConversationId(r.conversationId);
+      sound.play("receive");
+      if (r.correction.errors.length) window.setTimeout(() => sound.play("fix"), 220);
+      else window.setTimeout(() => sound.play("correct"), 220);
       setTurns((t) => {
         const copy = [...t];
         copy[copy.length - 1] = { role: "user", text, correction: r.correction };
@@ -52,22 +63,25 @@ export function Chat({ onClose }: { onClose: () => void }) {
 
   if (!scenario) {
     return (
-      <div>
+      <section>
+        <button className="ghost" onClick={onClose}>← Back</button>
         <h2>Choose a mission</h2>
-        {scenarios.map((s) => (
-          <button key={s.id} className="mission" onClick={() => start(s)}>
-            <strong>{s.title}</strong>
-            <span>{s.description}</span>
-          </button>
-        ))}
+        <div className="missions">
+          {scenarios.map((s) => (
+            <button key={s.id} className="card mission" onClick={() => start(s)}>
+              <strong>{s.title}</strong>
+              <span>{s.description}</span>
+            </button>
+          ))}
+        </div>
         {error && <p className="error">{error}</p>}
-        <button onClick={onClose}>Back</button>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div>
+    <section>
+      <button className="ghost" onClick={onClose}>← End mission</button>
       <h2>{scenario.title}</h2>
       <div className="chat">
         {turns.map((t, i) => (
@@ -76,7 +90,8 @@ export function Chat({ onClose }: { onClose: () => void }) {
             {t.correction && <CorrectionView c={t.correction} />}
           </div>
         ))}
-        {busy && <p className="bubble assistant">…</p>}
+        {busy && <div className="bubble assistant typing"><i /><i /><i /></div>}
+        <div ref={endRef} />
       </div>
       {error && <p className="error">{error}</p>}
       <form
@@ -89,8 +104,7 @@ export function Chat({ onClose }: { onClose: () => void }) {
         <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Write in English…" maxLength={1000} />
         <button className="primary" disabled={busy || !input.trim()}>Send</button>
       </form>
-      <button onClick={onClose}>End mission</button>
-    </div>
+    </section>
   );
 }
 

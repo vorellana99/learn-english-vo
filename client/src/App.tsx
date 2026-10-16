@@ -3,70 +3,98 @@ import { getProfile, type Mode, type Profile } from "./api";
 import { Review } from "./Review";
 import { Chat } from "./Chat";
 import { Dashboard } from "./Dashboard";
+import { Hero } from "./Hero";
+import { Roadmap } from "./Roadmap";
+import { StreakGoal, useInsights } from "./StreakGoal";
+import { SoundToggle } from "./SoundToggle";
+import { sound } from "./sound";
+
+type View = "home" | "review" | "chat";
+
+const MODES: { id: Mode; label: string; hint: string }[] = [
+  { id: "quick", label: "Quick", hint: "3 min" },
+  { id: "normal", label: "Normal", hint: "8 min" },
+  { id: "long", label: "Long", hint: "15+ min" },
+];
 
 export function App() {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [reviewing, setReviewing] = useState(false);
+  const [view, setView] = useState<View>("home");
   const [mode, setMode] = useState<Mode>("normal");
-  const [chatting, setChatting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const insights = useInsights(refreshKey);
 
   const refresh = useCallback(() => {
     getProfile().then(setProfile).catch((e: Error) => setError(e.message));
+    setRefreshKey((k) => k + 1);
   }, []);
   useEffect(refresh, [refresh]);
 
-  if (error) return <main><p className="error">{error}</p></main>;
-  if (!profile) return <main><p>Loading…</p></main>;
-
-  const pct = profile.xpForNext ? Math.min(100, (profile.xpIntoLevel / profile.xpForNext) * 100) : 100;
+  const go = (v: View) => {
+    sound.play("click");
+    sound.resumeMusicIfEnabled();
+    setView(v);
+  };
+  const home = () => {
+    setView("home");
+    refresh();
+  };
 
   return (
-    <main>
-      <h1>Learn English</h1>
-      <section className="stats">
-        <div><strong>{profile.streak}</strong><span>day streak 🔥</span></div>
-        <div><strong>{profile.xp}</strong><span>XP</span></div>
-        <div><strong>{profile.level}</strong><span>level</span></div>
-      </section>
-      <p className="progress-label">
-        {profile.nextLevel ? `Road to ${profile.nextLevel}` : "B2 reached 🎉"}
-      </p>
-      <div className="bar"><div style={{ width: `${pct}%` }} /></div>
-      {reviewing ? (
-        <Review
-          mode={mode}
-          onProgress={setProfile}
-          onDone={() => {
-            setReviewing(false);
-            refresh();
-          }}
-        />
-      ) : chatting ? (
-        <Chat
-          onClose={() => {
-            setChatting(false);
-            refresh();
-          }}
-        />
-      ) : (
-        <>
-          <div className="modes">
-            {(["quick", "normal", "long"] as const).map((m) => (
-              <button key={m} className={m === mode ? "active" : ""} onClick={() => setMode(m)}>
-                {{ quick: "Quick · 3 min", normal: "Normal · 8 min", long: "Long · 15+ min" }[m]}
-              </button>
-            ))}
+    <div className="shell">
+      <header className="topbar">
+        <button className="brand" onClick={() => view !== "home" && home()}>
+          <span className="logo">E</span> Learn English
+        </button>
+        <SoundToggle />
+      </header>
+      <main>
+        {error && <p className="error">{error}</p>}
+        {!profile && !error && <p className="muted">Loading…</p>}
+        {profile && view === "home" && (
+          <div className="home">
+            <Hero profile={profile} />
+            <StreakGoal profile={profile} insights={insights} />
+            <Roadmap profile={profile} />
+            <div className="actions">
+              <section className="card action">
+                <div className="action-head">
+                  <span className="emoji">🧠</span>
+                  <div>
+                    <h2>Practice cards</h2>
+                    <p className="muted">Spaced repetition adapted to your mistakes.</p>
+                  </div>
+                  {!!profile.dueCount && <span className="badge">{profile.dueCount} due</span>}
+                </div>
+                <div className="chips" role="radiogroup" aria-label="Session length">
+                  {MODES.map((m) => (
+                    <button key={m.id} role="radio" aria-checked={m.id === mode} className={`chip ${m.id === mode ? "active" : ""}`} onClick={() => { sound.play("click"); setMode(m.id); }}>
+                      {m.label} <small>{m.hint}</small>
+                    </button>
+                  ))}
+                </div>
+                <button className="primary" onClick={() => go("review")}>
+                  {profile.reviewedToday ? "Practice more" : "Start today's session"}
+                </button>
+              </section>
+              <section className="card action">
+                <div className="action-head">
+                  <span className="emoji">💬</span>
+                  <div>
+                    <h2>Conversation missions</h2>
+                    <p className="muted">Interviews, standups and small talk with an AI coach who corrects you.</p>
+                  </div>
+                </div>
+                <button className="primary alt" onClick={() => go("chat")}>Start a mission</button>
+              </section>
+            </div>
+            <Dashboard data={insights} />
           </div>
-          <div className="actions">
-            <button className="primary" onClick={() => setReviewing(true)}>
-              {profile.reviewedToday ? "Practice more" : "Start today's session"}
-            </button>
-            <button onClick={() => setChatting(true)}>Conversation mission 💬</button>
-          </div>
-          <Dashboard />
-        </>
-      )}
-    </main>
+        )}
+        {profile && view === "review" && <Review mode={mode} level={profile.level} streak={profile.streak} onProgress={setProfile} onDone={home} />}
+        {profile && view === "chat" && <Chat onClose={home} />}
+      </main>
+    </div>
   );
 }

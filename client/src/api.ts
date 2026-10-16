@@ -6,6 +6,8 @@ export interface Profile {
   xpIntoLevel: number;
   xpForNext: number | null;
   reviewedToday?: boolean;
+  dueCount?: number;
+  levels?: { code: string; minXp: number }[];
 }
 
 export interface Card {
