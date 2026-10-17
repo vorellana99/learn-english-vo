@@ -3,6 +3,7 @@ import { openDb } from "./db.js";
 import { createApp } from "./app.js";
 import type { Help } from "./help.js";
 import type { TutorInput } from "./tutor.js";
+import type { Details, DetailsInput } from "./details.js";
 
 const help: Help = {
   ideas: [
@@ -18,7 +19,20 @@ const help: Help = {
   ],
 };
 
-const correction = (errors: number) => ({
+const details: Details = {
+  alternatives: [
+    { level: "simple", text: "I have three years.", translation_es: "Tengo tres años." },
+    { level: "medium", text: "I have three years of experience.", translation_es: "Tengo tres años de experiencia." },
+    { level: "natural", text: "I've got about three years of hands-on experience.", translation_es: "Tengo unos tres años de experiencia práctica." },
+  ],
+  vocabulary: [{ text: "hands-on", translation_es: "práctico" }],
+  expected_es: "La pregunta pedía tu experiencia.",
+  tip_es: "Añade un ejemplo.",
+  pronunciation_es: "",
+};
+
+const correction = (errors: number, score = 70) => ({
+  score,
   corrected: "I have three years of experience.",
   natural: "I've got three years of experience.",
   explanation_es: "Usa 'have'.",
@@ -30,11 +44,13 @@ async function setup() {
   const tutorCalls: TutorInput[] = [];
   const helperCalls: { part: string; question: string }[] = [];
   let summaries = 0;
+  const detailCalls: DetailsInput[] = [];
+  let nextScore = 70;
   const server = createApp(
     db,
     async (input) => {
       tutorCalls.push(input);
-      return { reply: "Nice! Tell me more.", reply_es: "¡Bien! Cuéntame más.", correction: correction(1), help: input.noHelp ? undefined : help };
+      return { reply: "Nice! Tell me more.", reply_es: "¡Bien! Cuéntame más.", correction: correction(1, nextScore), help: input.noHelp ? undefined : help };
     },
     undefined,
     {
@@ -45,6 +61,10 @@ async function setup() {
       ideasHelper: async (input) => {
         helperCalls.push({ part: "ideas", question: input.question });
         return { ideas: help.ideas };
+      },
+      detailer: async (input) => {
+        detailCalls.push(input);
+        return details;
       },
       summarizer: async (input) => {
         summaries++;
@@ -61,7 +81,7 @@ async function setup() {
   const base = `http://127.0.0.1:${port}`;
   const post = (path: string, body: unknown) =>
     fetch(base + path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
-  return { db, server, base, post, tutorCalls, helperCalls, summaries: () => summaries };
+  return { db, server, base, post, tutorCalls, helperCalls, detailCalls, setScore: (n: number) => (nextScore = n), summaries: () => summaries };
 }
 
 describe("reply suggestions", () => {
@@ -150,6 +170,58 @@ describe("no-help runs, summary and saved phrases", () => {
     expect((await (await post("/api/phrases", body)).json()).saved).toBe(false);
     expect((await post("/api/phrases", { front: "x", back: "" })).status).toBe(400);
     expect(db.prepare("SELECT COUNT(*) AS n FROM cards WHERE topic = 'phrases'").get()).toEqual({ n: 1 });
+    server.close();
+  });
+});
+
+describe("answer scores and details", () => {
+  it("returns a clamped score and the message id, and stores the score", async () => {
+    const { db, server, post, setScore } = await setup();
+    setScore(140);
+    const high = await (await post("/api/chat", { scenarioId: "standup", message: "one" })).json();
+    expect(high.correction.score).toBe(100);
+    expect(high.messageId).toBeGreaterThan(0);
+    setScore(-5);
+    await post("/api/chat", { scenarioId: "standup", conversationId: high.conversationId, message: "two" });
+    expect(db.prepare("SELECT score FROM messages WHERE role = 'user' ORDER BY id").all()).toEqual([{ score: 100 }, { score: 0 }]);
+    server.close();
+  });
+
+  it("adds the average score to the run stats", async () => {
+    const { server, post, setScore } = await setup();
+    setScore(80);
+    const a = await (await post("/api/chat", { scenarioId: "standup", message: "one" })).json();
+    setScore(60);
+    await post("/api/chat", { scenarioId: "standup", conversationId: a.conversationId, message: "two" });
+    const s = await (await post("/api/chat/summary", { conversationId: a.conversationId })).json();
+    expect(s.stats.avgScore).toBe(70);
+    server.close();
+  });
+
+  it("generates the details of an answer once and answers with the matching question", async () => {
+    const { server, post, detailCalls } = await setup();
+    const a = await (await post("/api/chat", { scenarioId: "standup", message: "Yesterday I fixed bugs", spoken: true, clarity: 0.82 })).json();
+    const b = await (await post("/api/chat", { scenarioId: "standup", conversationId: a.conversationId, message: "Second answer" })).json();
+
+    const first = await (await post("/api/chat/details", { conversationId: a.conversationId, messageId: b.messageId })).json();
+    expect(first.details.alternatives.map((x: { level: string }) => x.level)).toEqual(["simple", "medium", "natural"]);
+    await post("/api/chat/details", { conversationId: a.conversationId, messageId: b.messageId });
+    expect(detailCalls.length).toBe(1); // the second request came from storage
+    expect(detailCalls[0]).toMatchObject({ question: "Nice! Tell me more.", answer: "Second answer", spoken: false });
+
+    await post("/api/chat/details", { conversationId: a.conversationId, messageId: a.messageId });
+    expect(detailCalls[1]).toMatchObject({ answer: "Yesterday I fixed bugs", spoken: true });
+    expect(detailCalls[1].question).toMatch(/standup/i); // the scenario opener
+    server.close();
+  });
+
+  it("rejects details for unknown answers or answers of another conversation", async () => {
+    const { server, post } = await setup();
+    const a = await (await post("/api/chat", { scenarioId: "standup", message: "one" })).json();
+    const other = await (await post("/api/chat", { scenarioId: "standup", message: "other" })).json();
+    expect((await post("/api/chat/details", { conversationId: a.conversationId, messageId: 9999 })).status).toBe(404);
+    expect((await post("/api/chat/details", { conversationId: a.conversationId, messageId: other.messageId })).status).toBe(404);
+    expect((await post("/api/chat/details", {})).status).toBe(404);
     server.close();
   });
 });

@@ -1,6 +1,7 @@
 import express from "express";
 import type { DB } from "./db.js";
 import type { ChatMessage } from "./claude.js";
+import { createClaudeDetailer, type Detailer } from "./details.js";
 import { createClaudeHelper, createClaudeIdeasHelper, type HelpIdeas, type HelpRest, type Helper, type IdeasHelper } from "./help.js";
 import { levelFor } from "./progress.js";
 import { findScenario } from "./scenarios.js";
@@ -14,6 +15,8 @@ export interface ChatDeps {
   /** Step 1 of the help ladder (ideas), meant for a fast model. */
   ideasHelper?: IdeasHelper;
   summarizer?: Summarizer;
+  /** Extra feedback on one answer (alternatives, vocabulary, tips), requested when the details panel opens. */
+  detailer?: Detailer;
 }
 
 interface MessageRow {
@@ -23,6 +26,7 @@ interface MessageRow {
   fromSuggestion: number;
   errors: number | null;
   correction: string | null;
+  score: number | null;
 }
 
 export interface RunStats {
@@ -31,13 +35,17 @@ export interface RunStats {
   errorsPerMessage: number;
   /** Answers written without opening any hint or using a suggestion. */
   unaided: number;
+  /** Average of the 0-100 scores the tutor gave, or null when there are none. */
+  avgScore: number | null;
   noHelpRun: boolean;
 }
 
 const MAX_MESSAGE = 1000;
 
+const clampScore = (n: number) => Math.max(0, Math.min(100, Math.round(Number.isFinite(n) ? n : 0)));
+
 export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
-  let { tutor, helper, ideasHelper, summarizer } = deps;
+  let { tutor, helper, ideasHelper, summarizer, detailer } = deps;
 
   const level = () => levelFor((db.prepare("SELECT xp FROM profile WHERE id = 1").get() as { xp: number }).xp).level;
 
@@ -54,7 +62,7 @@ export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
   const messagesOf = (convId: number) =>
     db
       .prepare(
-        `SELECT role, content, help_level AS helpLevel, from_suggestion AS fromSuggestion, errors, correction
+        `SELECT role, content, help_level AS helpLevel, from_suggestion AS fromSuggestion, errors, correction, score
          FROM messages WHERE conversation_id = ? ORDER BY id`,
       )
       .all(convId) as MessageRow[];
@@ -64,17 +72,19 @@ export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
     if (!user.length) return null;
     const mistakes = user.reduce((n, m) => n + (m.errors ?? 0), 0);
     const conv = db.prepare("SELECT no_help AS noHelp FROM conversations WHERE id = ?").get(convId) as { noHelp: number };
+    const scores = user.map((m) => m.score).filter((n): n is number => n !== null);
     return {
       messages: user.length,
       mistakes,
       errorsPerMessage: Math.round((mistakes / user.length) * 100) / 100,
       unaided: user.filter((m) => m.helpLevel === 0 && m.fromSuggestion === 0).length,
+      avgScore: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null,
       noHelpRun: conv.noHelp === 1,
     };
   };
 
   app.post("/api/chat", async (req, res) => {
-    const { scenarioId, conversationId, message, spoken, helpLevel, fromSuggestion, noHelp } = req.body ?? {};
+    const { scenarioId, conversationId, message, spoken, clarity, helpLevel, fromSuggestion, noHelp } = req.body ?? {};
     const scenario = typeof scenarioId === "string" ? findScenario(scenarioId) : undefined;
     if (!scenario || typeof message !== "string" || !message.trim() || message.length > MAX_MESSAGE) {
       res.status(400).json({ error: `valid scenarioId and message (max ${MAX_MESSAGE} chars) are required` });
@@ -111,14 +121,28 @@ export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
       const result = await t({ scenario, level: lvl, history, message: message.trim(), spoken: spoken === true, noHelp: noHelpRun });
       const help = noHelpRun ? undefined : result.help;
       const hint = Number.isInteger(helpLevel) ? Math.max(0, Math.min(3, helpLevel)) : 0;
-      db.transaction(() => {
+      const correction = { ...result.correction, score: clampScore(result.correction.score) };
+      const heardClarity = spoken === true && typeof clarity === "number" && clarity >= 0 && clarity <= 1 ? clarity : null;
+      const messageId = db.transaction(() => {
         if (conversationId === undefined) {
           db.prepare("INSERT INTO messages (conversation_id, role, content) VALUES (?, 'assistant', ?)").run(convId, scenario.opener);
         }
-        db.prepare(
-          `INSERT INTO messages (conversation_id, role, content, help_level, from_suggestion, errors, correction)
-           VALUES (?, 'user', ?, ?, ?, ?, ?)`,
-        ).run(convId, message.trim(), noHelpRun ? 0 : hint, !noHelpRun && fromSuggestion === true ? 1 : 0, result.correction.errors.length, JSON.stringify(result.correction));
+        const inserted = db
+          .prepare(
+            `INSERT INTO messages (conversation_id, role, content, help_level, from_suggestion, errors, correction, score, spoken, clarity)
+             VALUES (?, 'user', ?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .run(
+            convId,
+            message.trim(),
+            noHelpRun ? 0 : hint,
+            !noHelpRun && fromSuggestion === true ? 1 : 0,
+            correction.errors.length,
+            JSON.stringify(correction),
+            correction.score,
+            spoken === true ? 1 : 0,
+            heardClarity,
+          );
         db.prepare("INSERT INTO messages (conversation_id, role, content) VALUES (?, 'assistant', ?)").run(convId, result.reply);
         for (const e of result.correction.errors) {
           db.prepare("INSERT INTO mistakes (category, original, fixed) VALUES (?, ?, ?)").run(e.category, e.original, e.fixed);
@@ -129,8 +153,9 @@ export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
             lvl,
           );
         }
+        return Number(inserted.lastInsertRowid);
       })();
-      res.json({ conversationId: convId, reply: result.reply, reply_es: result.reply_es, correction: result.correction, help });
+      res.json({ conversationId: convId, messageId, reply: result.reply, reply_es: result.reply_es, correction, help });
     } catch (err) {
       console.error(err);
       res.status(502).json({ error: "The tutor is unavailable right now, try again" });
@@ -187,6 +212,53 @@ export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
     } catch (err) {
       console.error(err);
       res.status(502).json({ error: "Help is unavailable right now, try again" });
+    }
+  });
+
+  // Extra feedback on one answer of yours, requested when its details panel is opened. Generated once, then stored.
+  app.post("/api/chat/details", async (req, res) => {
+    const convId = Number(req.body?.conversationId);
+    const messageId = Number(req.body?.messageId);
+    const row = db
+      .prepare(
+        `SELECT m.id, m.content, m.correction, m.spoken, c.scenario_id AS scenarioId FROM messages m
+         JOIN conversations c ON c.id = m.conversation_id
+         WHERE m.id = ? AND m.conversation_id = ? AND m.role = 'user'`,
+      )
+      .get(messageId, convId) as { id: number; content: string; correction: string | null; spoken: number; scenarioId: string } | undefined;
+    const scenario = row ? findScenario(row.scenarioId) : undefined;
+    if (!row || !scenario) {
+      res.status(404).json({ error: "answer not found" });
+      return;
+    }
+    const cached = db.prepare("SELECT json FROM message_details WHERE message_id = ?").get(row.id) as { json: string } | undefined;
+    if (cached) {
+      res.json({ details: JSON.parse(cached.json) });
+      return;
+    }
+    const d = resolve(detailer, () => (detailer = createClaudeDetailer()), res);
+    if (!d) return;
+    try {
+      const before = db
+        .prepare("SELECT content FROM messages WHERE conversation_id = ? AND id < ? AND role = 'assistant' ORDER BY id DESC LIMIT 1")
+        .get(convId, row.id) as { content: string } | undefined;
+      const correction = row.correction
+        ? (JSON.parse(row.correction) as { corrected: string; errors: { category: string; original: string; fixed: string }[] })
+        : { corrected: row.content, errors: [] };
+      const details = await d({
+        scenario,
+        level: level(),
+        question: before?.content ?? scenario.opener,
+        answer: row.content,
+        corrected: correction.corrected,
+        errors: correction.errors,
+        spoken: row.spoken === 1,
+      });
+      db.prepare("INSERT OR REPLACE INTO message_details (message_id, json) VALUES (?, ?)").run(row.id, JSON.stringify(details));
+      res.json({ details });
+    } catch (err) {
+      console.error(err);
+      res.status(502).json({ error: "Details are unavailable right now, try again" });
     }
   });
 

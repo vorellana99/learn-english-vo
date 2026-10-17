@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { savePhrase, type MissionSummary as Data } from "./api";
+import { scoreBand } from "./score";
 import { sound } from "./sound";
 import { Translate } from "./Translate";
 import { canSpeak, speak } from "./speech";
@@ -50,6 +51,7 @@ export function MissionSummary({ data, onRetryNoHelp, onMissions, onHome }: Prop
         <p>{summary.summary_es}</p>
         <div className="tiles">
           <div className="tile"><strong>{stats.messages}</strong><small>answers</small></div>
+          {stats.avgScore !== null && <div className="tile"><strong style={{ color: scoreBand(stats.avgScore).color }}>{stats.avgScore}%</strong><small>average score</small></div>}
           <div className="tile"><strong>{stats.errorsPerMessage}</strong><small>mistakes / answer</small></div>
           <div className="tile"><strong>{stats.unaided}/{stats.messages}</strong><small>without help</small></div>
         </div>

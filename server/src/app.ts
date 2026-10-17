@@ -6,6 +6,7 @@ import { buildInsights, buildSession } from "./insights.js";
 import { scenarios } from "./scenarios.js";
 import type { Tutor } from "./tutor.js";
 import type { Helper, IdeasHelper } from "./help.js";
+import type { Detailer } from "./details.js";
 import type { Summarizer } from "./summary.js";
 import { mountChat } from "./chatRoutes.js";
 import type { Evaluator } from "./evaluator.js";
@@ -21,7 +22,7 @@ const today = (tz = 0) => new Date(Date.now() - tz * 60_000).toISOString().slice
 const addDays = (date: string, days: number) =>
   new Date(Date.parse(date) + days * 86_400_000).toISOString().slice(0, 10);
 
-export function createApp(db: DB, tutor?: Tutor, evaluator?: Evaluator, extras: { helper?: Helper; ideasHelper?: IdeasHelper; summarizer?: Summarizer } = {}) {
+export function createApp(db: DB, tutor?: Tutor, evaluator?: Evaluator, extras: { helper?: Helper; ideasHelper?: IdeasHelper; summarizer?: Summarizer; detailer?: Detailer } = {}) {
   const app = express();
   app.use(express.json());
 

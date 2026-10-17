@@ -67,6 +67,8 @@ export interface Correction {
   corrected: string;
   natural: string;
   explanation_es: string;
+  /** 0-100 rating of the answer. */
+  score: number;
   errors: { category: string; original: string; fixed: string }[];
 }
 
@@ -92,6 +94,8 @@ export interface ChatOptions {
   helpLevel?: number;
   fromSuggestion?: boolean;
   noHelp?: boolean;
+  /** Speech-recognition confidence (0-1) of a dictated answer. */
+  clarity?: number;
 }
 
 export async function postChat(scenarioId: string, message: string, opts: ChatOptions = {}) {
@@ -102,7 +106,7 @@ export async function postChat(scenarioId: string, message: string, opts: ChatOp
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? `Request failed: ${res.status}`);
-  return data as { conversationId: number; reply: string; reply_es: string; correction: Correction; help?: Help };
+  return data as { conversationId: number; messageId: number; reply: string; reply_es: string; correction: Correction; help?: Help };
 }
 
 export interface RunStats {
@@ -110,6 +114,7 @@ export interface RunStats {
   mistakes: number;
   errorsPerMessage: number;
   unaided: number;
+  avgScore: number | null;
   noHelpRun: boolean;
 }
 
@@ -182,3 +187,14 @@ export const getHelp = (scenarioId: string, conversationId: number | undefined, 
 export const getMissionSummary = (conversationId: number) => post<MissionSummary>("/api/chat/summary", { conversationId });
 export const getPracticed = () => fetch("/api/chat/practiced").then((r) => json<{ practiced: Record<string, number> }>(r));
 export const savePhrase = (front: string, back: string) => post<{ saved: boolean }>("/api/phrases", { front, back });
+
+export interface AnswerDetails {
+  alternatives: Suggestion[];
+  vocabulary: { text: string; translation_es: string }[];
+  expected_es: string;
+  tip_es: string;
+  pronunciation_es: string;
+}
+
+export const getAnswerDetails = (conversationId: number, messageId: number) =>
+  post<{ details: AnswerDetails }>("/api/chat/details", { conversationId, messageId });

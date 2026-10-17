@@ -84,6 +84,10 @@ export function openDb(file = process.env.DB_FILE ?? "learn-english.db"): DB {
       missed TEXT NOT NULL DEFAULT '[]',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS message_details (
+      message_id INTEGER PRIMARY KEY REFERENCES messages(id),
+      json TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS help_cache (
       key TEXT PRIMARY KEY,
       json TEXT NOT NULL
@@ -100,6 +104,9 @@ export function openDb(file = process.env.DB_FILE ?? "learn-english.db"): DB {
   addColumn(db, "messages", "from_suggestion", "INTEGER NOT NULL DEFAULT 0");
   addColumn(db, "messages", "errors", "INTEGER");
   addColumn(db, "messages", "correction", "TEXT");
+  addColumn(db, "messages", "score", "INTEGER");
+  addColumn(db, "messages", "spoken", "INTEGER NOT NULL DEFAULT 0");
+  addColumn(db, "messages", "clarity", "REAL");
   const insert = db.prepare("INSERT OR IGNORE INTO cards (front, back, level, topic) VALUES (?, ?, ?, ?)");
   db.transaction(() => {
     for (const s of seedCards) insert.run(s.front, s.back, s.level, s.topic);

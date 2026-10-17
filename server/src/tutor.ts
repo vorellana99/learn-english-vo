@@ -14,6 +14,8 @@ const Base = z.object({
     corrected: z.string(),
     natural: z.string(),
     explanation_es: z.string(),
+    /** 0-100 rating of the user's message (the server clamps it). */
+    score: z.number(),
     errors: z.array(
       z.object({
         category: z.enum(ERROR_CATEGORIES),
@@ -49,7 +51,7 @@ export function createClaudeTutor(client = new Anthropic()): Tutor {
       spoken
         ? "The user's latest message was dictated with speech recognition: ignore capitalization and punctuation, and treat odd words as possible mispronunciations (mention a likely mispronunciation in explanation_es when it seems clear)."
         : "",
-      "Also correct the user's latest message: `corrected` is the minimally fixed sentence, `natural` is how a native speaker would say it, `explanation_es` is a brief explanation in Spanish of the mistakes (empty string if there were none), and `errors` lists each mistake (empty if none). If the message is already correct, return it unchanged in `corrected` and `natural`.",
+      "Also correct the user's latest message: `corrected` is the minimally fixed sentence, `natural` is how a native speaker would say it, `explanation_es` is a brief explanation in Spanish of the mistakes (empty string if there were none), and `errors` lists each mistake (empty if none). If the message is already correct, return it unchanged in `corrected` and `natural`. `score` is a calibrated 0-100 rating of that message covering grammar, vocabulary, naturalness and whether it really answers what was asked: 90-100 only for correct, natural and relevant answers; 75-89 minor issues; 60-74 understandable but with several errors or unnatural; 40-59 hard to follow or only partly relevant; below 40 mostly incorrect or off-topic. A correct one-word reply that does not really answer should stay at about 60 or lower.",
       noHelp ? "" : HELP_INSTRUCTIONS,
     ]
       .filter(Boolean)

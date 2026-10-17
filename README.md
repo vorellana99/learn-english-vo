@@ -59,6 +59,16 @@ and level. How much help
 you used is stored per answer. "✅ Finish & summary" gives a recap with your conversation rewritten more naturally,
 phrases to keep and a comparison with your previous run. "🚫 Retry without help" repeats a mission with help disabled.
 
+## Answer scores and details
+
+Every answer you send in a conversation mission gets a 0-100% score (grammar, vocabulary, naturalness and relevance, rated
+by the tutor in the same call as its reply) shown as a round badge whose color follows five levels: 90-100 green
+(Excellent), 75-89 teal (Good), 60-74 yellow (Fair), 40-59 orange (Can improve), 0-39 red (Needs practice). The
+"Details" button opens a panel, colored by the same level, with the tutor's correction and explanation, your mistakes,
+and (loaded the first time you open it, one extra call per answer, then stored) other ways to say it at three levels
+with translation / listen / practice / save, key vocabulary, what the question expected, a tip, and pronunciation
+notes when you dictated the answer. The mission summary shows your average score.
+
 ## Spanish translations
 
 A reusable `Translate` component (`client/src/Translate.tsx`) puts a translator icon button (an "A" next to a Japanese-style character, drawn as SVG) next to English text; pressing it shows

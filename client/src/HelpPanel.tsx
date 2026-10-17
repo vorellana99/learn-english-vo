@@ -1,11 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { savePhrase, type HelpPart, type HelpState, type Suggestion } from "./api";
-import { compare, type Comparison } from "./shadow";
-import { sound } from "./sound";
+import type { HelpPart, HelpState } from "./api";
+import { AnswerCard } from "./AnswerCard";
+import { canSpeak, speak } from "./speech";
 import { Translate } from "./Translate";
-import { canListen, canSpeak, listen, speak, stopSpeaking, type Listener } from "./speech";
-
-const LEVEL_LABELS: Record<Suggestion["level"], string> = { simple: "Simple", medium: "Medium", natural: "Natural" };
 
 interface Props {
   help: HelpState | null;
@@ -19,63 +15,11 @@ interface Props {
   onReveal: (level: number) => void;
   onRetry: (part: HelpPart) => void;
   onUse: (text: string) => void;
-  /** Called before the panel starts the microphone so the chat's own recording stops. */
+  /** Called before a card starts the microphone so the chat's own recording stops. */
   onMicStart: () => void;
 }
 
 export function HelpPanel({ help, loading, error, level, open, onToggle, onReveal, onRetry, onUse, onMicStart }: Props) {
-  const [saved, setSaved] = useState<Set<string>>(new Set());
-  const [practicing, setPracticing] = useState<string | null>(null);
-  const [heard, setHeard] = useState("");
-  const [results, setResults] = useState<Record<string, Comparison>>({});
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const listener = useRef<Listener | null>(null);
-
-  useEffect(
-    () => () => {
-      listener.current?.stop();
-      stopSpeaking();
-    },
-    [],
-  );
-
-  const save = async (text: string, translation: string) => {
-    setSaveError(null);
-    try {
-      await savePhrase(text, translation);
-      setSaved((s) => new Set(s).add(text));
-      sound.play("correct");
-    } catch (e) {
-      setSaveError((e as Error).message);
-    }
-  };
-
-  const practice = (s: Suggestion) => {
-    if (practicing === s.text) {
-      listener.current?.stop();
-      return;
-    }
-    listener.current?.stop();
-    onMicStart();
-    stopSpeaking();
-    setHeard("");
-    setPracticing(s.text);
-    const l = listen({
-      onText: setHeard,
-      onEnd: ({ text }) => {
-        listener.current = null;
-        setPracticing(null);
-        if (!text) return;
-        const c = compare(s.text, text);
-        setResults((r) => ({ ...r, [s.text]: c }));
-        sound.play(c.score >= 90 ? "easy" : c.score >= 70 ? "correct" : "hard");
-      },
-      onError: () => setPracticing(null),
-    });
-    if (l) listener.current = l;
-    else setPracticing(null);
-  };
-
   const restReady = Boolean(help?.starter && help?.suggestions);
   const failedPart: HelpPart = !help?.ideas ? "ideas" : "rest";
 
@@ -141,40 +85,11 @@ export function HelpPanel({ help, loading, error, level, open, onToggle, onRevea
             ) : (
               <div className="hint">
                 <p className="eyebrow">3 · Full answers</p>
-                {help!.suggestions!.map((s) => {
-                  const result = results[s.text];
-                  const live = practicing === s.text;
-                  return (
-                    <div key={s.level} className="suggestion">
-                      <span className={`level-tag ${s.level}`}>{LEVEL_LABELS[s.level]}</span>
-                      <p className="s-text">
-                        {result
-                          ? result.words.map((w, i) => (
-                              <span key={i} className={w.ok ? "w-ok" : "w-miss"}>{w.text} </span>
-                            ))
-                          : s.text}
-                      </p>
-                      {live && <p className="heard">{heard || "Listening…"}</p>}
-                      {result && !live && <p className="muted">🎯 {result.score}% match</p>}
-                      <div className="mini-actions">
-                        <Translate es={s.translation_es} />
-                        <button className="mini" onClick={() => onUse(s.text)}>✏️ Use</button>
-                        {canSpeak() && <button className="mini" aria-label="Listen" onClick={() => speak(s.text)}>🔈 Listen</button>}
-                        {canListen() && (
-                          <button className={`mini ${live ? "live" : ""}`} onClick={() => practice(s)}>
-                            {live ? "■ Stop" : "🎤 Practice"}
-                          </button>
-                        )}
-                        <button className="mini" disabled={saved.has(s.text)} onClick={() => void save(s.text, s.translation_es)}>
-                          {saved.has(s.text) ? "✓ Saved" : "💾 Save"}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                {help!.suggestions!.map((s) => (
+                  <AnswerCard key={s.level} suggestion={s} onUse={onUse} onMicStart={onMicStart} />
+                ))}
               </div>
             ))}
-          {saveError && <p className="error">{saveError}</p>}
         </div>
       )}
     </div>

@@ -62,6 +62,7 @@ describe("chat api", () => {
         corrected: "I have three years of experience.",
         natural: "I've got three years of experience.",
         explanation_es: "Usa 'have' para experiencia.",
+        score: 62,
         errors: [{ category: "grammar" as const, original: "I has three years", fixed: "I have three years of experience." }],
       },
     };

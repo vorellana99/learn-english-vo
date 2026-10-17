@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { getHelp, getMissionSummary, getPracticed, getScenarios, postChat, type Correction, type HelpPart, type HelpState, type MissionSummary as SummaryData, type Scenario } from "./api";
+import { AnswerFeedback } from "./AnswerFeedback";
 import { HelpPanel } from "./HelpPanel";
 import { MissionSummary } from "./MissionSummary";
 import { Translate } from "./Translate";
@@ -11,6 +12,8 @@ interface Turn {
   text: string;
   /** Spanish translation of an assistant message. */
   es?: string;
+  /** Id of the stored answer, needed to load its details. */
+  messageId?: number;
   correction?: Correction;
   /** Speech-recognition confidence (0-1) when the message was dictated. */
   clarity?: number | null;
@@ -192,16 +195,16 @@ export function Chat({ onClose }: { onClose: () => void }) {
         helpLevel: usedHelp.level,
         fromSuggestion: usedHelp.suggestion,
         noHelp,
+        clarity: voice.used && voice.confidence != null ? voice.confidence : undefined,
       });
       setConversationId(r.conversationId);
       resetHelp(noHelp ? null : (r.help ?? null));
       sound.play("receive");
-      if (r.correction.errors.length) window.setTimeout(() => sound.play("fix"), 220);
-      else window.setTimeout(() => sound.play("correct"), 220);
+      window.setTimeout(() => sound.play(r.correction.score >= 75 ? "correct" : "fix"), 220);
       if (autoSpeak) window.setTimeout(() => speak(r.reply), 500);
       setTurns((t) => {
         const copy = [...t];
-        copy[copy.length - 1] = { ...copy[copy.length - 1], correction: r.correction };
+        copy[copy.length - 1] = { ...copy[copy.length - 1], correction: r.correction, messageId: r.messageId };
         return [...copy, { role: "assistant", text: r.reply, es: r.reply_es }];
       });
     } catch (e) {
@@ -294,19 +297,29 @@ export function Chat({ onClose }: { onClose: () => void }) {
       {noHelp && <p className="nohelp-banner">🚫 No-help run: suggestions are off. Answer on your own.</p>}
       <div className="chat">
         {turns.map((t, i) => (
-          <div key={i} className={`bubble ${t.role}`}>
-            <p>{t.text}</p>
-            {t.role === "assistant" && (
-              <div className="bubble-tools">
-                {canSpeak() && (
-                  <button className="speak" aria-label="Listen" title="Listen" onClick={() => speak(t.text)}>🔈</button>
-                )}
-                <Translate es={t.es} />
-              </div>
+          <Fragment key={i}>
+            <div className={`bubble ${t.role}`}>
+              <p>{t.text}</p>
+              {t.role === "assistant" && (
+                <div className="bubble-tools">
+                  {canSpeak() && (
+                    <button className="speak" aria-label="Listen" title="Listen" onClick={() => speak(t.text)}>🔈</button>
+                  )}
+                  <Translate es={t.es} />
+                </div>
+              )}
+              {t.clarity != null && <small className="clarity">🎙 Clarity {Math.round(t.clarity * 100)}%</small>}
+            </div>
+            {t.role === "user" && t.correction && t.messageId !== undefined && conversationId !== undefined && (
+              <AnswerFeedback
+                conversationId={conversationId}
+                messageId={t.messageId}
+                correction={t.correction}
+                clarity={t.clarity}
+                onMicStart={stopMic}
+              />
             )}
-            {t.clarity != null && <small className="clarity">🎙 Clarity {Math.round(t.clarity * 100)}%</small>}
-            {t.correction && <CorrectionView c={t.correction} />}
-          </div>
+          </Fragment>
         ))}
         {busy && <div className="bubble assistant typing"><i /><i /><i /></div>}
         <div ref={endRef} />
@@ -355,17 +368,5 @@ export function Chat({ onClose }: { onClose: () => void }) {
         <button className="primary" disabled={busy || !input.trim()}>Send</button>
       </form>
     </section>
-  );
-}
-
-function CorrectionView({ c }: { c: Correction }) {
-  if (!c.errors.length) return <small className="ok">✓ Looks good! Natural: “{c.natural}”</small>;
-  return (
-    <div className="correction">
-      <div>✏️ {c.corrected}</div>
-      <div>💬 {c.natural}</div>
-      <small>{c.explanation_es}</small>
-      <small>Saved {c.errors.length} mistake(s) as review cards.</small>
-    </div>
   );
 }

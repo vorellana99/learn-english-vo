@@ -3,6 +3,8 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { createClaudeEvaluator } from "./evaluator.js";
 import { createClaudeSummarizer } from "./summary.js";
 import { findScenario } from "./scenarios.js";
+import { createClaudeDetailer } from "./details.js";
+import { createClaudeTutor } from "./tutor.js";
 
 /** Records the system prompt of the one request a factory makes. */
 function capture(parsed: unknown) {
@@ -41,5 +43,26 @@ describe("model answers are written out in full", () => {
     });
     expect(seen[0]).toContain("Never use placeholders, brackets or blanks");
     expect(seen[0]).not.toContain("[brackets] for");
+  });
+
+  it("tells the detailer to avoid placeholders and to ask about pronunciation only when dictated", async () => {
+    const empty = { alternatives: [], vocabulary: [], expected_es: "", tip_es: "", pronunciation_es: "" };
+    const base = { scenario: findScenario("standup")!, level: "A2", question: "q", answer: "a", corrected: "a", errors: [] };
+    const typed = capture(empty);
+    await createClaudeDetailer(typed.client)({ ...base, spoken: false });
+    expect(typed.seen[0]).toContain("never use placeholders, brackets or blanks");
+    expect(typed.seen[0]).toContain("`pronunciation_es` must be an empty string");
+    const dictated = capture(empty);
+    await createClaudeDetailer(dictated.client)({ ...base, spoken: true });
+    expect(dictated.seen[0]).toContain("mispronounced");
+    expect(dictated.seen[0]).not.toContain("must be an empty string");
+  });
+
+  it("gives the tutor a calibrated 0-100 scoring rubric", async () => {
+    const reply = { reply: "", reply_es: "", correction: { corrected: "", natural: "", explanation_es: "", score: 50, errors: [] } };
+    const { client, seen } = capture(reply);
+    await createClaudeTutor(client)({ scenario: findScenario("standup")!, level: "A1", history: [], message: "yes", noHelp: true });
+    expect(seen[0]).toContain("`score` is a calibrated 0-100 rating");
+    expect(seen[0]).toContain("90-100 only for correct, natural and relevant answers");
   });
 });
