@@ -10,5 +10,5 @@ React + TypeScript (Vite) client, Node + Express + TypeScript server, SQLite (`b
 ## Conventions
 
 - Work happens on `develop`; do not push to `main` directly.
-- Spanish translations of English text always use the `<Translate es="..." />` component (`client/src/Translate.tsx`): the same icon-only 🌐 round button everywhere, with the floating bubble. Do not add text labels, other sizes or variants to it.
+- Spanish translations of English text always use the `<Translate es="..." />` component (`client/src/Translate.tsx`): the same icon-only round translator button (the `TranslateIcon` SVG, not an emoji) everywhere, with the floating bubble. Do not add text labels, other sizes or variants to it.
 - AI calls go through `server/src/claude.ts` (`parseStructured`) and are injected into routes, so tests use fakes and never call the API.

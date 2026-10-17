@@ -267,3 +267,6 @@ button small { opacity: 0.7; margin-left: 6px; font-weight: 500; }
 .q-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .center-tr { display: flex; justify-content: center; }
 .bubble.assistant { overflow: visible; }
+
+.tr-btn, button.icon { display: inline-grid; place-items: center; }
+.tr-btn { color: var(--cyan); }
