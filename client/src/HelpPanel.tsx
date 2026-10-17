@@ -91,6 +91,9 @@ export function HelpPanel({ help, loading, error, level, open, onToggle, onRevea
                   {help.ideas.map((idea) => (
                     <span key={idea.en} className="chip static">
                       {idea.en}
+                      {canSpeak() && (
+                        <button className="speak" aria-label={`Listen: ${idea.en}`} title="Listen" onClick={() => speak(idea.en)}>🔈</button>
+                      )}
                       <Translate es={idea.es} />
                     </span>
                   ))}
