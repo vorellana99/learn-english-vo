@@ -3,6 +3,7 @@ import { getShadowingSession, postShadowingResult, type Phrase } from "./api";
 import { confetti } from "./effects";
 import { compare, missedWords, type Comparison } from "./shadow";
 import { sound } from "./sound";
+import { Translate } from "./Translate";
 import { canListen, canSpeak, listen, speak, stopSpeaking, type Listener } from "./speech";
 
 const SPEEDS = [
@@ -178,7 +179,7 @@ export function Shadowing({ onClose, onProgress }: { onClose: () => void; onProg
         ) : (
           <p className={`sentence ${hideText && !listening ? "blurred" : ""}`}>{phrase.front}</p>
         )}
-        <p className="muted">{phrase.back}</p>
+        <div className="center-tr"><Translate es={phrase.back} variant="mini" /></div>
         {!attempt && listening && <p className="heard">{heard || "Listening…"}</p>}
         {attempt && (
           <div className="shadow-result">

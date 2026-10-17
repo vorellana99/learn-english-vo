@@ -4,10 +4,11 @@ import { parseStructured, type ChatMessage } from "./claude.js";
 import type { Scenario } from "./scenarios.js";
 
 export const HelpSchema = z.object({
-  /** Ideas of what to mention, in Spanish (hint 1). */
-  keywords_es: z.array(z.string()),
-  /** The beginning of an English answer the user can complete (hint 2). */
+  /** Short English ideas of what to mention, each with its Spanish meaning (hint 1). */
+  ideas: z.array(z.object({ en: z.string(), es: z.string() })),
+  /** The beginning of an English answer the user can complete (hint 2), with its Spanish translation. */
   starter: z.string(),
+  starter_es: z.string(),
   /** Three full answers at increasing difficulty (hint 3). */
   suggestions: z.array(
     z.object({
@@ -22,7 +23,7 @@ export type Help = z.infer<typeof HelpSchema>;
 
 /** Prompt fragment shared by the tutor (help for the next question) and the standalone helper. */
 export const HELP_INSTRUCTIONS =
-  "For `help`, assume the user must now answer your latest message: `keywords_es` has 3-5 short ideas in Spanish of what they could mention; `starter` is the first words of an English answer ending in '...' for them to complete; `suggestions` has exactly three English answers in this order - `simple` (1-2 short sentences at the user's CEFR level), `medium` (a bit richer, one level up) and `natural` (how a confident B2 speaker would say it) - each with a Spanish `translation_es`. Make them believable for a software developer and put personal facts the user must fill in inside [brackets], for example [your role] or [number] years.";
+  "For `help`, assume the user must now answer your latest message: `ideas` has 3-5 short English noun phrases or key phrases of what they could mention (2-5 words each, at the user's level), each with its Spanish meaning in `es`; `starter` is the first words of an English answer ending in '...' for them to complete, and `starter_es` its Spanish translation; `suggestions` has exactly three English answers in this order - `simple` (1-2 short sentences at the user's CEFR level), `medium` (a bit richer, one level up) and `natural` (how a confident B2 speaker would say it) - each with a Spanish `translation_es`. Make them believable for a software developer and put personal facts the user must fill in inside [brackets], for example [your role] or [number] years.";
 
 export interface HelpInput {
   scenario: Scenario;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { answerInterview, finishInterview, getInterviewHistory, getInterviewTypes, startInterview, type InterviewType, type Report } from "./api";
 import { confetti } from "./effects";
 import { sound } from "./sound";
+import { Translate } from "./Translate";
 import { canListen, canSpeak, listen, speak, stopSpeaking, type Listener } from "./speech";
 
 type Stage = "pick" | "ask" | "evaluating" | "report";
@@ -21,6 +22,7 @@ export function Interview({ onClose, onProgress }: { onClose: () => void; onProg
   const [recent, setRecent] = useState<{ id: number; type: string; overall: number }[]>([]);
   const [interviewId, setInterviewId] = useState(0);
   const [question, setQuestion] = useState("");
+  const [questionEs, setQuestionEs] = useState("");
   const [index, setIndex] = useState(0);
   const [total, setTotal] = useState(0);
   const [answer, setAnswer] = useState("");
@@ -53,6 +55,7 @@ export function Interview({ onClose, onProgress }: { onClose: () => void; onProg
       sound.play("click");
       setInterviewId(s.interviewId);
       setQuestion(s.question);
+      setQuestionEs(s.question_es);
       setIndex(s.index);
       setTotal(s.total);
       setAnswer("");
@@ -96,6 +99,7 @@ export function Interview({ onClose, onProgress }: { onClose: () => void; onProg
         await evaluate();
       } else {
         setQuestion(r.question!);
+        setQuestionEs(r.question_es ?? "");
         setIndex(r.index);
         window.setTimeout(() => speak(r.question!), 300);
       }
@@ -166,7 +170,10 @@ export function Interview({ onClose, onProgress }: { onClose: () => void; onProg
         <div className="card question" key={index}>
           <p className="eyebrow">Interviewer</p>
           <p className="q">{question}</p>
-          {canSpeak() && <button className="ghost" onClick={() => speak(question)}>🔈 Repeat question</button>}
+          <div className="mini-actions">
+            {canSpeak() && <button className="ghost" onClick={() => speak(question)}>🔈 Repeat question</button>}
+            <Translate es={questionEs} variant="mini" />
+          </div>
         </div>
         <textarea
           value={answer}

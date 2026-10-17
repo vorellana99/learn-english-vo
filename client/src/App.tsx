@@ -9,6 +9,7 @@ import { Hero } from "./Hero";
 import { Roadmap } from "./Roadmap";
 import { StreakGoal, useInsights } from "./StreakGoal";
 import { SoundToggle } from "./SoundToggle";
+import { TranslationsToggle } from "./Translate";
 import { sound } from "./sound";
 
 type View = "home" | "review" | "chat" | "interview" | "shadowing";
@@ -49,7 +50,10 @@ export function App() {
         <button className="brand" onClick={() => view !== "home" && home()}>
           <span className="logo">E</span> Learn English
         </button>
-        <SoundToggle />
+        <div className="toggles">
+          <TranslationsToggle />
+          <SoundToggle />
+        </div>
       </header>
       <main>
         {error && <p className="error">{error}</p>}

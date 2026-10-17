@@ -1,7 +1,7 @@
 import express from "express";
 import type { DB } from "./db.js";
 import { createClaudeEvaluator, normalizeReport, type Evaluator, type Report } from "./evaluator.js";
-import { findInterviewType, interviewTypes, pickQuestions } from "./interviews.js";
+import { findInterviewType, interviewTypes, pickQuestions, questionEs } from "./interviews.js";
 import { levelFor, nextStreak } from "./progress.js";
 
 const MAX_ANSWER = 2000;
@@ -50,7 +50,7 @@ export function mountInterviews(app: express.Express, db: DB, today: (tz: number
       questions.forEach((q, i) => ins.run(interviewId, i, q));
       return interviewId;
     })();
-    res.json({ interviewId: id, index: 0, total: questions.length, question: questions[0] });
+    res.json({ interviewId: id, index: 0, total: questions.length, question: questions[0], question_es: questionEs(questions[0]) });
   });
 
   app.post("/api/interview/:id/answer", (req, res) => {
@@ -84,7 +84,7 @@ export function mountInterviews(app: express.Express, db: DB, today: (tz: number
     const next = turns.find((t) => t.idx === current.idx + 1);
     res.json(
       next
-        ? { done: false, index: next.idx, total: turns.length, question: next.question }
+        ? { done: false, index: next.idx, total: turns.length, question: next.question, question_es: questionEs(next.question) }
         : { done: true, index: turns.length, total: turns.length },
     );
   });

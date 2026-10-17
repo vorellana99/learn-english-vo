@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { savePhrase, type Help, type Suggestion } from "./api";
 import { compare, type Comparison } from "./shadow";
 import { sound } from "./sound";
+import { Translate } from "./Translate";
 import { canListen, canSpeak, listen, speak, stopSpeaking, type Listener } from "./speech";
 
 const LEVEL_LABELS: Record<Suggestion["level"], string> = { simple: "Simple", medium: "Medium", natural: "Natural" };
@@ -87,8 +88,11 @@ export function HelpPanel({ help, loading, error, level, open, onToggle, onRevea
               <div className="hint">
                 <p className="eyebrow">1 · Ideas</p>
                 <div className="chips">
-                  {help.keywords_es.map((k) => (
-                    <span key={k} className="chip static">{k}</span>
+                  {help.ideas.map((idea) => (
+                    <span key={idea.en} className="chip static">
+                      {idea.en}
+                      <Translate es={idea.es} />
+                    </span>
                   ))}
                 </div>
               </div>
@@ -101,6 +105,7 @@ export function HelpPanel({ help, loading, error, level, open, onToggle, onRevea
                   <div className="starter">
                     <span>{help.starter}</span>
                     <div className="mini-actions">
+                      <Translate es={help.starter_es} />
                       <button className="mini" onClick={() => onUse(help.starter.replace(/\s*\.{3}\s*$/, " "))}>✏️ Use</button>
                       {canSpeak() && <button className="mini" aria-label="Listen" onClick={() => speak(help.starter.replace(/\.{3}/g, ""))}>🔈</button>}
                     </div>
@@ -127,10 +132,10 @@ export function HelpPanel({ help, loading, error, level, open, onToggle, onRevea
                                 ))
                               : s.text}
                           </p>
-                          <p className="muted s-tr">{s.translation_es}</p>
                           {live && <p className="heard">{heard || "Listening…"}</p>}
                           {result && !live && <p className="muted">🎯 {result.score}% match</p>}
                           <div className="mini-actions">
+                            <Translate es={s.translation_es} variant="mini" />
                             <button className="mini" onClick={() => onUse(s.text)}>✏️ Use</button>
                             {canSpeak() && <button className="mini" aria-label="Listen" onClick={() => speak(s.text)}>🔈 Listen</button>}
                             {canListen() && (

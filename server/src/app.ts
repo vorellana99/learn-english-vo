@@ -86,7 +86,7 @@ export function createApp(db: DB, tutor?: Tutor, evaluator?: Evaluator, extras: 
   });
 
   app.get("/api/scenarios", (_req, res) => {
-    res.json({ scenarios: scenarios.map(({ id, title, description, opener }) => ({ id, title, description, opener })) });
+    res.json({ scenarios: scenarios.map(({ id, title, description, opener, opener_es }) => ({ id, title, description, opener, opener_es })) });
   });
 
   app.get("/api/mistakes", (_req, res) => {

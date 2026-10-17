@@ -185,13 +185,14 @@ button small { opacity: 0.7; margin-left: 6px; font-weight: 500; }
 
 .chat-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .bubble { position: relative; }
-.speak { position: absolute; right: -34px; bottom: 4px; width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); font-size: 0.8rem; opacity: 0.7; padding: 0; }
-.speak:hover { opacity: 1; }
+.speak, .tr-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); font-size: 0.8rem; opacity: 0.7; padding: 0; flex: none; }
+.bubble-tools { position: absolute; left: calc(100% + 6px); bottom: 4px; display: flex; gap: 4px; }
+.speak:hover, .tr-btn:hover { opacity: 1; }
 .clarity { display: block; margin-top: 4px; opacity: 0.8; }
 .mic { width: 48px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); font-size: 1.1rem; flex: none; }
 .mic.live { background: rgba(251, 113, 133, 0.2); border-color: var(--rose); color: var(--rose); animation: rec 1.2s ease-in-out infinite; }
 @keyframes rec { 50% { box-shadow: 0 0 0 8px rgba(251, 113, 133, 0); } 0% { box-shadow: 0 0 0 0 rgba(251, 113, 133, 0.5); } }
-@media (max-width: 520px) { .speak { right: -4px; bottom: -30px; } }
+@media (max-width: 520px) { .bubble-tools { position: static; margin-top: 6px; } }
 
 .wide-card { grid-column: 1 / -1; }
 .interview { display: grid; gap: 14px; max-width: 680px; margin: 0 auto; }
@@ -256,3 +257,13 @@ button small { opacity: 0.7; margin-left: 6px; font-weight: 500; }
 .mission-extra { display: flex; justify-content: flex-end; }
 .nohelp-banner { background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.4); color: var(--amber); border-radius: 12px; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; }
 .help > .chip { justify-self: start; }
+
+.toggles { display: flex; gap: 6px; }
+.tr-btn.on, .mini.on { opacity: 1; border-color: rgba(34, 211, 238, 0.7); background: rgba(34, 211, 238, 0.16); }
+.chip .tr-btn { width: 22px; height: 22px; font-size: 0.7rem; margin-left: 6px; vertical-align: middle; }
+.tr-inline { display: block; color: var(--cyan); font-weight: 500; font-size: 0.8rem; opacity: 0.9; }
+.tpop { position: fixed; z-index: 80; max-width: 280px; padding: 10px 12px; border-radius: 12px; background: #1b2040; border: 1px solid rgba(34, 211, 238, 0.45); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); color: var(--text); font-size: 0.92rem; line-height: 1.4; animation: rise 0.15s ease both; }
+.tpop-flag { font-size: 0.65rem; font-weight: 800; letter-spacing: 0.08em; color: var(--cyan); margin-right: 4px; }
+.q-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.center-tr { display: flex; justify-content: center; }
+.bubble.assistant { overflow: visible; }

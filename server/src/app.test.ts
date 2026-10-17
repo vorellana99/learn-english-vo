@@ -57,6 +57,7 @@ describe("chat api", () => {
       seen.push(input.spoken);
       return {
       reply: "Nice! Where did you work before?",
+      reply_es: "¡Bien! ¿Dónde trabajaste antes?",
       correction: {
         corrected: "I have three years of experience.",
         natural: "I've got three years of experience.",

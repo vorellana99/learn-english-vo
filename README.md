@@ -47,6 +47,15 @@ opening question's help is requested the first time you open the panel and cache
 you used is stored per answer. "✅ Finish & summary" gives a recap with your conversation rewritten more naturally,
 phrases to keep and a comparison with your previous run. "🚫 Retry without help" repeats a mission with help disabled.
 
+## Spanish translations (🌐)
+
+A reusable `Translate` component (`client/src/Translate.tsx`) puts a 🌐 button next to English text; pressing it shows
+the Spanish version in a floating bubble, and pressing it again (or Escape, or clicking elsewhere) hides it. It is used
+on every tutor message, on each idea / starter / answer in the help ladder, in the mission summary, in shadowing phrases
+and in interview questions. The 🌐 button in the header switches on "always show translations", which shows them
+inline instead and is remembered in the browser. Translations of tutor replies, ideas and summaries come from the same
+Claude call as the content; scenario openers and interview questions have hand-written translations.
+
 ## Mock interview
 
 Home → "Mock interview": 6 questions (behavioral, technical, system design, recruiter screen or a mix), answered in

@@ -127,7 +127,7 @@ export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
           );
         }
       })();
-      res.json({ conversationId: convId, reply: result.reply, correction: result.correction, help });
+      res.json({ conversationId: convId, reply: result.reply, reply_es: result.reply_es, correction: result.correction, help });
     } catch (err) {
       console.error(err);
       res.status(502).json({ error: "The tutor is unavailable right now, try again" });
@@ -157,7 +157,7 @@ export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
       }
     }
     const lvl = level();
-    const cacheKey = `${scenario.id}:${lvl}`;
+    const cacheKey = `v2:${scenario.id}:${lvl}`; // bump the prefix when the Help shape changes
     const isOpener = question === scenario.opener && history.length === 0;
     if (isOpener) {
       const cached = db.prepare("SELECT json FROM help_cache WHERE key = ?").get(cacheKey) as { json: string } | undefined;

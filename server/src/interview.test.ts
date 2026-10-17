@@ -46,6 +46,7 @@ describe("interview api", () => {
     expect((await post("/api/interview/start", { type: "nope" })).status).toBe(400);
     const start = await (await post("/api/interview/start", { type: "behavioral" })).json();
     expect(start.total).toBe(QUESTIONS_PER_INTERVIEW);
+    expect(start.question_es).not.toBe("");
 
     expect((await post(`/api/interview/${start.interviewId}/finish`, {})).status).toBe(409);
     expect((await post(`/api/interview/${start.interviewId}/answer`, { answer: "  " })).status).toBe(400);

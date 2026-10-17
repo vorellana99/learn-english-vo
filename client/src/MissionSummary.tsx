@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { savePhrase, type MissionSummary as Data } from "./api";
 import { sound } from "./sound";
+import { Translate } from "./Translate";
 import { canSpeak, speak } from "./speech";
 
 interface Props {
@@ -69,9 +70,9 @@ export function MissionSummary({ data, onRetryNoHelp, onMissions, onHome }: Prop
             <div key={p.text} className="phrase-row">
               <div>
                 <strong>{p.text}</strong>
-                <p className="muted">{p.translation_es}</p>
               </div>
               <div className="mini-actions">
+                <Translate es={p.translation_es} />
                 {canSpeak() && <button className="mini" aria-label="Listen" onClick={() => speak(p.text)}>🔈</button>}
                 <button className="mini" disabled={saved.has(p.text)} onClick={() => void save(p.text, p.translation_es)}>
                   {saved.has(p.text) ? "✓ Saved" : "💾 Save"}
@@ -86,10 +87,11 @@ export function MissionSummary({ data, onRetryNoHelp, onMissions, onHome }: Prop
         <h3>Your conversation, said more naturally</h3>
         {summary.rewritten.map((r, i) => (
           <div key={i} className="rewrite">
-            <p className="muted">🧑‍💼 {r.question}</p>
+            <p className="muted q-line">🧑‍💼 {r.question} <Translate es={r.question_es} /></p>
             <p className="yours">{r.yours}</p>
             <p className="better">{r.better}</p>
             <div className="mini-actions">
+              <Translate es={r.better_es} variant="mini" />
               {canSpeak() && <button className="mini" onClick={() => speak(r.better)}>🔈 Listen</button>}
               <button className="mini" disabled={saved.has(r.better)} onClick={() => void save(r.better, r.yours)}>
                 {saved.has(r.better) ? "✓ Saved" : "💾 Save"}

@@ -2,12 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { getHelp, getMissionSummary, getPracticed, getScenarios, postChat, type Correction, type Help, type MissionSummary as SummaryData, type Scenario } from "./api";
 import { HelpPanel } from "./HelpPanel";
 import { MissionSummary } from "./MissionSummary";
+import { Translate } from "./Translate";
 import { sound } from "./sound";
 import { canListen, canSpeak, listen, speak, stopSpeaking, type Listener } from "./speech";
 
 interface Turn {
   role: "user" | "assistant";
   text: string;
+  /** Spanish translation of an assistant message. */
+  es?: string;
   correction?: Correction;
   /** Speech-recognition confidence (0-1) when the message was dictated. */
   clarity?: number | null;
@@ -120,7 +123,7 @@ export function Chat({ onClose }: { onClose: () => void }) {
     setNoHelp(withoutHelp);
     setSummary(null);
     setConversationId(undefined);
-    setTurns([{ role: "assistant", text: s.opener }]);
+    setTurns([{ role: "assistant", text: s.opener, es: s.opener_es }]);
     setInput("");
     resetHelp(null);
     if (autoSpeak) speak(s.opener);
@@ -186,7 +189,7 @@ export function Chat({ onClose }: { onClose: () => void }) {
       setTurns((t) => {
         const copy = [...t];
         copy[copy.length - 1] = { ...copy[copy.length - 1], correction: r.correction };
-        return [...copy, { role: "assistant", text: r.reply }];
+        return [...copy, { role: "assistant", text: r.reply, es: r.reply_es }];
       });
     } catch (e) {
       setError((e as Error).message);
@@ -280,8 +283,13 @@ export function Chat({ onClose }: { onClose: () => void }) {
         {turns.map((t, i) => (
           <div key={i} className={`bubble ${t.role}`}>
             <p>{t.text}</p>
-            {t.role === "assistant" && canSpeak() && (
-              <button className="speak" aria-label="Listen" title="Listen" onClick={() => speak(t.text)}>🔈</button>
+            {t.role === "assistant" && (
+              <div className="bubble-tools">
+                {canSpeak() && (
+                  <button className="speak" aria-label="Listen" title="Listen" onClick={() => speak(t.text)}>🔈</button>
+                )}
+                <Translate es={t.es} />
+              </div>
             )}
             {t.clarity != null && <small className="clarity">🎙 Clarity {Math.round(t.clarity * 100)}%</small>}
             {t.correction && <CorrectionView c={t.correction} />}

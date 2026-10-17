@@ -8,6 +8,8 @@ export const ERROR_CATEGORIES = ["grammar", "tense", "preposition", "vocabulary"
 
 const Base = z.object({
   reply: z.string(),
+  /** Spanish translation of `reply`, shown behind the translate button. */
+  reply_es: z.string(),
   correction: z.object({
     corrected: z.string(),
     natural: z.string(),
@@ -43,7 +45,7 @@ export function createClaudeTutor(client = new Anthropic()): Tutor {
     const system = [
       scenario.roleplay,
       `The user is a Spanish speaker learning English, CEFR level ${level}, preparing for tech jobs in the USA.`,
-      "Keep your reply short (1-3 sentences) and use simple English matching the user's level. Stay in character and keep the conversation going.",
+      "Keep your reply short (1-3 sentences) and use simple English matching the user's level. Stay in character and keep the conversation going. Put a faithful Spanish translation of your reply in `reply_es`.",
       spoken
         ? "The user's latest message was dictated with speech recognition: ignore capitalization and punctuation, and treat odd words as possible mispronunciations (mention a likely mispronunciation in explanation_es when it seems clear)."
         : "",

@@ -3,6 +3,8 @@ export interface Scenario {
   title: string;
   description: string;
   opener: string;
+  /** Spanish translation of the opener, shown behind the translate button. */
+  opener_es: string;
   roleplay: string;
 }
 
@@ -12,6 +14,7 @@ export const scenarios: Scenario[] = [
     title: "Job interview: tell me about yourself",
     description: "HR screening for a full stack / AI engineer role.",
     opener: "Hi! Thanks for joining. Please tell me a little about yourself.",
+    opener_es: "¡Hola! Gracias por unirte. Por favor, cuéntame un poco sobre ti.",
     roleplay:
       "You are a friendly recruiter at a US tech company running a first screening interview for a full stack / AI engineer role. Ask one question at a time (background, experience, strengths, why this company).",
   },
@@ -20,6 +23,7 @@ export const scenarios: Scenario[] = [
     title: "Daily standup",
     description: "Say what you did, what you will do and any blockers.",
     opener: "Good morning! It's your turn for the standup. What did you work on yesterday?",
+    opener_es: "¡Buenos días! Es tu turno en el standup. ¿En qué trabajaste ayer?",
     roleplay:
       "You are the engineering manager running a daily standup. Ask about yesterday, today and blockers, one question at a time, and react naturally to what the user says.",
   },
@@ -28,6 +32,7 @@ export const scenarios: Scenario[] = [
     title: "Explain a bug to a teammate",
     description: "Describe a problem and how you fixed it.",
     opener: "Hey, I saw the production alert earlier. Can you explain what happened?",
+    opener_es: "Oye, vi la alerta de producción hace un rato. ¿Puedes explicar qué pasó?",
     roleplay:
       "You are a senior teammate asking the user to explain a production bug, its root cause and the fix. Ask follow-up questions one at a time.",
   },
@@ -36,6 +41,7 @@ export const scenarios: Scenario[] = [
     title: "Small talk with a coworker",
     description: "Casual conversation at the office.",
     opener: "Hi! How was your weekend?",
+    opener_es: "¡Hola! ¿Cómo estuvo tu fin de semana?",
     roleplay: "You are a friendly coworker making casual small talk at a US office.",
   },
 ];
@@ -46,6 +52,7 @@ scenarios.push(
     title: "Behavioral interview (STAR)",
     description: "Answer with Situation, Task, Action and Result.",
     opener: "Tell me about a time you faced a difficult technical problem. What was the situation?",
+    opener_es: "Cuéntame de una vez que enfrentaste un problema técnico difícil. ¿Cuál era la situación?",
     roleplay:
       "You are an engineering manager running a behavioral interview. Ask one behavioral question at a time and follow up to draw out the Situation, Task, Action and Result. Use these topics in turn: a hard bug, a conflict with a teammate, a missed deadline, a time you learned something quickly.",
   },
@@ -54,6 +61,7 @@ scenarios.push(
     title: "System design interview",
     description: "Design a simple system and explain your trade-offs.",
     opener: "Let's design a URL shortener. To start, what requirements would you clarify first?",
+    opener_es: "Diseñemos un acortador de URLs. Para empezar, ¿qué requisitos aclararías primero?",
     roleplay:
       "You are a senior engineer running a system design interview. Guide the user step by step: requirements, API, data model, scaling, trade-offs. Ask one question at a time and keep your own technical statements short.",
   },
@@ -62,6 +70,7 @@ scenarios.push(
     title: "Code review conversation",
     description: "Give and receive feedback politely.",
     opener: "Thanks for the pull request! I left a few comments. Do you want to walk me through your approach?",
+    opener_es: "¡Gracias por el pull request! Dejé algunos comentarios. ¿Quieres explicarme tu enfoque paso a paso?",
     roleplay:
       "You are a teammate reviewing the user's pull request. Raise one polite concern at a time (naming, tests, error handling, performance) and let the user respond, explain or agree.",
   },
@@ -70,6 +79,7 @@ scenarios.push(
     title: "Present your project",
     description: "Walk a team through something you built.",
     opener: "We're excited to see your demo. Can you start by telling us what problem your project solves?",
+    opener_es: "Tenemos ganas de ver tu demo. ¿Puedes empezar contándonos qué problema resuelve tu proyecto?",
     roleplay:
       "You are a product manager attending the user's demo. Ask simple, curious questions about the problem, the users, the tech stack and what they would improve next.",
   },
@@ -78,6 +88,7 @@ scenarios.push(
     title: "Negotiate an offer",
     description: "Discuss salary, remote work and start date.",
     opener: "We're happy to offer you the position. Do you have any questions about the offer?",
+    opener_es: "Nos alegra ofrecerte el puesto. ¿Tienes alguna pregunta sobre la oferta?",
     roleplay:
       "You are a friendly recruiter who has just made a job offer. Be open to reasonable negotiation (salary, start date, remote policy) but not pushy. Ask what matters most to the user.",
   },
@@ -86,6 +97,7 @@ scenarios.push(
     title: "Explain AI to a non-technical person",
     description: "Make LLMs and embeddings easy to understand.",
     opener: "I keep hearing about large language models. Can you explain what they are in simple words?",
+    opener_es: "Escucho todo el tiempo sobre los modelos de lenguaje grandes. ¿Puedes explicar qué son con palabras sencillas?",
     roleplay:
       "You are a curious non-technical stakeholder. Ask the user to explain AI concepts in plain language and ask for simple analogies. Challenge jargon politely.",
   },
@@ -94,6 +106,7 @@ scenarios.push(
     title: "Recruiter phone screen",
     description: "Availability, background and expectations.",
     opener: "Hi, this is Sam from the recruiting team. Is now still a good time to talk?",
+    opener_es: "Hola, soy Sam del equipo de reclutamiento. ¿Sigue siendo buen momento para hablar?",
     roleplay:
       "You are a recruiter doing a quick 15-minute phone screen. Ask about availability, current situation, visa status, salary expectations and main skills, one question at a time.",
   },
@@ -102,6 +115,7 @@ scenarios.push(
     title: "Production incident call",
     description: "Stay calm and communicate clearly under pressure.",
     opener: "We have errors spiking in production. What are you seeing on your side?",
+    opener_es: "Tenemos un pico de errores en producción. ¿Qué estás viendo de tu lado?",
     roleplay:
       "You are the on-call lead during a production incident. Ask short, urgent questions: symptoms, recent changes, impact, next action, and ask for status updates. Use realistic incident vocabulary.",
   },
@@ -110,6 +124,7 @@ scenarios.push(
     title: "One-on-one with your manager",
     description: "Talk about goals, feedback and growth.",
     opener: "Thanks for making time. How have things been going for you lately?",
+    opener_es: "Gracias por hacer tiempo. ¿Cómo te han ido las cosas últimamente?",
     roleplay:
       "You are a supportive manager in a one-on-one. Ask about workload, wins, challenges, feedback and career goals, and respond with encouraging, natural follow-ups.",
   },

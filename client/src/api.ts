@@ -60,6 +60,7 @@ export interface Scenario {
   title: string;
   description: string;
   opener: string;
+  opener_es: string;
 }
 
 export interface Correction {
@@ -78,8 +79,9 @@ export interface Suggestion {
 }
 
 export interface Help {
-  keywords_es: string[];
+  ideas: { en: string; es: string }[];
   starter: string;
+  starter_es: string;
   suggestions: Suggestion[];
 }
 
@@ -100,7 +102,7 @@ export async function postChat(scenarioId: string, message: string, opts: ChatOp
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? `Request failed: ${res.status}`);
-  return data as { conversationId: number; reply: string; correction: Correction; help?: Help };
+  return data as { conversationId: number; reply: string; reply_es: string; correction: Correction; help?: Help };
 }
 
 export interface RunStats {
@@ -114,7 +116,8 @@ export interface RunStats {
 export interface MissionSummary {
   summary: {
     summary_es: string;
-    rewritten: { question: string; yours: string; better: string }[];
+    /** Translations are optional because summaries stored before they existed do not have them. */
+    rewritten: { question: string; question_es?: string; yours: string; better: string; better_es?: string }[];
     new_phrases: { text: string; translation_es: string }[];
     tips: string[];
   };
@@ -150,9 +153,9 @@ export const getInterviewTypes = () => fetch("/api/interview/types").then((r) =>
 export const getInterviewHistory = () =>
   fetch("/api/interview/history").then((r) => json<{ history: { id: number; type: string; overall: number; finishedAt: string }[]; best: number | null }>(r));
 export const startInterview = (type: string) =>
-  post<{ interviewId: number; index: number; total: number; question: string }>("/api/interview/start", { type });
+  post<{ interviewId: number; index: number; total: number; question: string; question_es: string }>("/api/interview/start", { type });
 export const answerInterview = (id: number, answer: string, spoken: boolean) =>
-  post<{ done: boolean; index: number; total: number; question?: string }>(`/api/interview/${id}/answer`, { answer, spoken });
+  post<{ done: boolean; index: number; total: number; question?: string; question_es?: string }>(`/api/interview/${id}/answer`, { answer, spoken });
 export const finishInterview = (id: number) =>
   post<{ report: Report; xpAwarded: number } & Profile>(`/api/interview/${id}/finish`, { tz: new Date().getTimezoneOffset() });
 

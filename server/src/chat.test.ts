@@ -5,8 +5,12 @@ import type { Help } from "./help.js";
 import type { TutorInput } from "./tutor.js";
 
 const help: Help = {
-  keywords_es: ["tu rol", "años de experiencia"],
+  ideas: [
+    { en: "your role", es: "tu rol" },
+    { en: "years of experience", es: "años de experiencia" },
+  ],
   starter: "I have worked as ...",
+  starter_es: "He trabajado como ...",
   suggestions: [
     { level: "simple", text: "I am a developer.", translation_es: "Soy desarrollador." },
     { level: "medium", text: "I work as a full stack developer.", translation_es: "Trabajo como desarrollador full stack." },
@@ -30,7 +34,7 @@ async function setup() {
     db,
     async (input) => {
       tutorCalls.push(input);
-      return { reply: "Nice! Tell me more.", correction: correction(1), help: input.noHelp ? undefined : help };
+      return { reply: "Nice! Tell me more.", reply_es: "¡Bien! Cuéntame más.", correction: correction(1), help: input.noHelp ? undefined : help };
     },
     undefined,
     {
@@ -42,7 +46,7 @@ async function setup() {
         summaries++;
         return {
           summary_es: "Buen trabajo.",
-          rewritten: input.turns.map((t) => ({ question: t.question, yours: t.answer, better: t.corrected })),
+          rewritten: input.turns.map((t) => ({ question: t.question, question_es: "pregunta", yours: t.answer, better: t.corrected, better_es: "mejor" })),
           new_phrases: [{ text: "I've got three years of experience.", translation_es: "Tengo tres años de experiencia." }],
           tips: ["Sigue así"],
         };
@@ -60,6 +64,8 @@ describe("reply suggestions", () => {
   it("returns help with each reply and stores how much help was used", async () => {
     const { db, server, post } = await setup();
     const r = await (await post("/api/chat", { scenarioId: "interview-intro", message: "I has three years", helpLevel: 2, fromSuggestion: true })).json();
+    expect(r.reply_es).toBe("¡Bien! Cuéntame más.");
+    expect(r.help.ideas[0]).toEqual({ en: "your role", es: "tu rol" });
     expect(r.help.suggestions.map((s: { level: string }) => s.level)).toEqual(["simple", "medium", "natural"]);
     await post("/api/chat", { scenarioId: "interview-intro", conversationId: r.conversationId, message: "Second answer", helpLevel: 99 });
     const rows = db.prepare("SELECT help_level AS h, from_suggestion AS f, errors FROM messages WHERE role = 'user' ORDER BY id").all();
