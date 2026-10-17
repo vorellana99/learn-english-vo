@@ -3,6 +3,12 @@ import { seedCards } from "./seed.js";
 
 export type DB = Database.Database;
 
+/** SQLite has no ADD COLUMN IF NOT EXISTS, so existing databases are migrated here. */
+function addColumn(db: DB, table: string, column: string, definition: string) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
 export function openDb(file = process.env.DB_FILE ?? "learn-english.db"): DB {
   const db = new Database(file);
   db.pragma("journal_mode = WAL");
@@ -78,8 +84,22 @@ export function openDb(file = process.env.DB_FILE ?? "learn-english.db"): DB {
       missed TEXT NOT NULL DEFAULT '[]',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS help_cache (
+      key TEXT PRIMARY KEY,
+      json TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS conversation_summaries (
+      conversation_id INTEGER PRIMARY KEY REFERENCES conversations(id),
+      json TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
     INSERT OR IGNORE INTO profile (id) VALUES (1);
   `);
+  addColumn(db, "conversations", "no_help", "INTEGER NOT NULL DEFAULT 0");
+  addColumn(db, "messages", "help_level", "INTEGER NOT NULL DEFAULT 0");
+  addColumn(db, "messages", "from_suggestion", "INTEGER NOT NULL DEFAULT 0");
+  addColumn(db, "messages", "errors", "INTEGER");
+  addColumn(db, "messages", "correction", "TEXT");
   const insert = db.prepare("INSERT OR IGNORE INTO cards (front, back, level, topic) VALUES (?, ?, ?, ?)");
   db.transaction(() => {
     for (const s of seedCards) insert.run(s.front, s.back, s.level, s.topic);
