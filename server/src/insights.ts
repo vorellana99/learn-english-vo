@@ -63,7 +63,7 @@ export function buildSession(db: DB, mode: Mode, level: string, today: string) {
 
   const room = Math.max(0, Math.min(newLimit, cap - due.length));
   const struggle = new Map(topicStats(db).map((t) => [t.topic, t.struggleRate]));
-  const weight = (c: Card) => (c.topic === "mistakes" ? 2 : 0) + (struggle.get(c.topic) ?? 0);
+  const weight = (c: Card) => (c.topic === "mistakes" ? 2 : c.topic === "phrases" ? 1.5 : 0) + (struggle.get(c.topic) ?? 0);
   const maxRank = Math.max(0, levelRank(level));
 
   const fresh = (

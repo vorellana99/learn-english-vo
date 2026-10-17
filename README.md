@@ -34,6 +34,19 @@ and tell the tutor the text came from speech so it ignores punctuation and flags
 Voice input works in Chrome, Edge and Safari; Firefox only gets the text chat. Audio is processed by the browser
 vendor's speech service, not by this app.
 
+## Reply suggestions in conversation missions
+
+Hidden by default. Press 💡 "Need help answering?" on any question to open a help ladder (press again to hide it):
+1. **Ideas** - what you could mention, in Spanish.
+2. **Start like this** - the beginning of an English answer.
+3. **Full answers** - three versions (Simple, Medium, Natural) with Spanish translation. Each one can be inserted
+   in the text box, listened to, practiced out loud (word-by-word match) or saved as a review card.
+
+The help for each next question is generated in the same call as the tutor's reply, so it costs no extra request; the
+opening question's help is requested the first time you open the panel and cached per mission and level. How much help
+you used is stored per answer. "✅ Finish & summary" gives a recap with your conversation rewritten more naturally,
+phrases to keep and a comparison with your previous run. "🚫 Retry without help" repeats a mission with help disabled.
+
 ## Mock interview
 
 Home → "Mock interview": 6 questions (behavioral, technical, system design, recruiter screen or a mix), answered in

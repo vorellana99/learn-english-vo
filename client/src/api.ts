@@ -71,15 +71,55 @@ export interface Correction {
 
 export const getScenarios = () => fetch("/api/scenarios").then((r) => json<{ scenarios: Scenario[] }>(r));
 
-export async function postChat(scenarioId: string, message: string, conversationId?: number, spoken = false) {
+export interface Suggestion {
+  level: "simple" | "medium" | "natural";
+  text: string;
+  translation_es: string;
+}
+
+export interface Help {
+  keywords_es: string[];
+  starter: string;
+  suggestions: Suggestion[];
+}
+
+export interface ChatOptions {
+  conversationId?: number;
+  spoken?: boolean;
+  /** Most help revealed for the question being answered: 0 none, 1 ideas, 2 starter, 3 full answers. */
+  helpLevel?: number;
+  fromSuggestion?: boolean;
+  noHelp?: boolean;
+}
+
+export async function postChat(scenarioId: string, message: string, opts: ChatOptions = {}) {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ scenarioId, message, conversationId, spoken }),
+    body: JSON.stringify({ scenarioId, message, ...opts }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? `Request failed: ${res.status}`);
-  return data as { conversationId: number; reply: string; correction: Correction };
+  return data as { conversationId: number; reply: string; correction: Correction; help?: Help };
+}
+
+export interface RunStats {
+  messages: number;
+  mistakes: number;
+  errorsPerMessage: number;
+  unaided: number;
+  noHelpRun: boolean;
+}
+
+export interface MissionSummary {
+  summary: {
+    summary_es: string;
+    rewritten: { question: string; yours: string; better: string }[];
+    new_phrases: { text: string; translation_es: string }[];
+    tips: string[];
+  };
+  stats: RunStats;
+  previous: RunStats | null;
 }
 
 export interface InterviewType {
@@ -129,3 +169,9 @@ export const getShadowingSession = (count = 5) =>
   fetch(`/api/shadowing/session?count=${count}`).then((r) => json<{ phrases: Phrase[] }>(r));
 export const postShadowingResult = (cardId: number, score: number, missed: string[]) =>
   post<{ xpAwarded: number } & Profile>("/api/shadowing/result", { cardId, score, missed, tz: new Date().getTimezoneOffset() });
+
+export const getHelp = (scenarioId: string, conversationId?: number) =>
+  post<{ help: Help }>("/api/chat/help", { scenarioId, conversationId });
+export const getMissionSummary = (conversationId: number) => post<MissionSummary>("/api/chat/summary", { conversationId });
+export const getPracticed = () => fetch("/api/chat/practiced").then((r) => json<{ practiced: Record<string, number> }>(r));
+export const savePhrase = (front: string, back: string) => post<{ saved: boolean }>("/api/phrases", { front, back });

@@ -229,3 +229,30 @@ button small { opacity: 0.7; margin-left: 6px; font-weight: 500; }
 .shadow-result strong { font-size: 1.3rem; }
 .shadow-tools { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .chip.big { padding: 12px 18px; font-size: 1rem; }
+
+.help { display: grid; gap: 10px; margin-bottom: 10px; }
+.help-body { display: grid; gap: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px; animation: rise 0.25s ease both; }
+.hint { display: grid; gap: 8px; }
+.chip.static { cursor: default; background: rgba(34, 211, 238, 0.08); border-color: rgba(34, 211, 238, 0.3); font-weight: 500; }
+.starter { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-weight: 600; flex-wrap: wrap; }
+.suggestion { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255, 255, 255, 0.03); }
+.suggestion .s-text { font-size: 1.05rem; font-weight: 600; line-height: 1.4; }
+.s-tr { font-size: 0.85rem; }
+.level-tag { justify-self: start; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 9px; border-radius: 99px; }
+.level-tag.simple { background: rgba(52, 211, 153, 0.18); color: var(--green); }
+.level-tag.medium { background: rgba(251, 191, 36, 0.18); color: var(--amber); }
+.level-tag.natural { background: rgba(139, 92, 246, 0.25); color: #c4b5fd; }
+.mini-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.mini { border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); padding: 6px 11px; font-size: 0.85rem; font-weight: 600; }
+.mini:hover:not(:disabled) { border-color: var(--violet); }
+.mini.live { border-color: var(--rose); color: var(--rose); animation: rec 1.2s ease-in-out infinite; }
+.phrase-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border); }
+.rewrite { display: grid; gap: 6px; padding: 12px 0; border-top: 1px solid var(--border); }
+.yours { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(251, 113, 133, 0.5); margin: 0; }
+.good { color: var(--green); }
+.bad { color: var(--rose); }
+.mission-wrap { display: grid; gap: 6px; }
+.mission-wrap .mission { height: 100%; }
+.mission-extra { display: flex; justify-content: flex-end; }
+.nohelp-banner { background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.4); color: var(--amber); border-radius: 12px; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; }
+.help > .chip { justify-self: start; }

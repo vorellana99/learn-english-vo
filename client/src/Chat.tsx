@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { getScenarios, postChat, type Correction, type Scenario } from "./api";
+import { getHelp, getMissionSummary, getPracticed, getScenarios, postChat, type Correction, type Help, type MissionSummary as SummaryData, type Scenario } from "./api";
+import { HelpPanel } from "./HelpPanel";
+import { MissionSummary } from "./MissionSummary";
 import { sound } from "./sound";
 import { canListen, canSpeak, listen, speak, stopSpeaking, type Listener } from "./speech";
 
@@ -21,15 +23,29 @@ const readAutoSpeak = () => {
 
 export function Chat({ onClose }: { onClose: () => void }) {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [practiced, setPracticed] = useState<Record<string, number>>({});
   const [scenario, setScenario] = useState<Scenario | null>(null);
+  const [noHelp, setNoHelp] = useState(false);
   const [conversationId, setConversationId] = useState<number | undefined>();
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const endRef = useRef<HTMLDivElement>(null);
   const [listening, setListening] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(readAutoSpeak);
+  const [summary, setSummary] = useState<SummaryData | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
+
+  // Help for the question currently on screen. It starts hidden and resets with every new question.
+  const [help, setHelp] = useState<Help | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpLevel, setHelpLevel] = useState(0);
+  const [helpLoading, setHelpLoading] = useState(false);
+  const [helpError, setHelpError] = useState<string | null>(null);
+  const fromSuggestion = useRef(false);
+
+  const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const listener = useRef<Listener | null>(null);
   const dictated = useRef<{ used: boolean; confidence: number | null }>({ used: false, confidence: null });
 
@@ -37,6 +53,23 @@ export function Chat({ onClose }: { onClose: () => void }) {
     listener.current?.stop();
     stopSpeaking();
   }, []);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [turns, busy]);
+
+  useEffect(() => {
+    getScenarios().then((s) => setScenarios(s.scenarios)).catch((e: Error) => setError(e.message));
+    getPracticed().then((p) => setPracticed(p.practiced)).catch(() => undefined);
+  }, []);
+
+  const resetHelp = (next: Help | null) => {
+    setHelp(next);
+    setHelpOpen(false);
+    setHelpLevel(0);
+    setHelpError(null);
+    fromSuggestion.current = false;
+  };
 
   const toggleAutoSpeak = () => {
     const next = !autoSpeak;
@@ -50,9 +83,11 @@ export function Chat({ onClose }: { onClose: () => void }) {
     else if (turns.length) speak(turns[turns.length - 1].text);
   };
 
+  const stopMic = () => listener.current?.stop();
+
   const toggleMic = () => {
     if (listening) {
-      listener.current?.stop();
+      stopMic();
       return;
     }
     stopSpeaking();
@@ -63,7 +98,10 @@ export function Chat({ onClose }: { onClose: () => void }) {
       onEnd: ({ text, confidence }) => {
         setListening(false);
         listener.current = null;
-        if (text) dictated.current = { used: true, confidence };
+        if (text) {
+          dictated.current = { used: true, confidence };
+          fromSuggestion.current = false;
+        }
       },
       onError: (m) => {
         setError(m);
@@ -76,27 +114,55 @@ export function Chat({ onClose }: { onClose: () => void }) {
     }
   };
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [turns, busy]);
-
-  useEffect(() => {
-    getScenarios().then((s) => setScenarios(s.scenarios)).catch((e: Error) => setError(e.message));
-  }, []);
-
-  const start = (s: Scenario) => {
+  const start = (s: Scenario, withoutHelp = false) => {
     sound.play("click");
     setScenario(s);
+    setNoHelp(withoutHelp);
+    setSummary(null);
     setConversationId(undefined);
     setTurns([{ role: "assistant", text: s.opener }]);
+    setInput("");
+    resetHelp(null);
     if (autoSpeak) speak(s.opener);
+  };
+
+  // The opening question has no help yet: it is requested the first time the panel is opened.
+  const toggleHelp = async () => {
+    sound.play("click");
+    if (helpOpen) {
+      setHelpOpen(false);
+      return;
+    }
+    setHelpOpen(true);
+    setHelpLevel((l) => Math.max(l, 1));
+    if (!help && scenario && !helpLoading) {
+      setHelpLoading(true);
+      setHelpError(null);
+      try {
+        setHelp((await getHelp(scenario.id, conversationId)).help);
+      } catch (e) {
+        setHelpError((e as Error).message);
+      } finally {
+        setHelpLoading(false);
+      }
+    }
+  };
+
+  const useText = (text: string) => {
+    sound.play("click");
+    stopMic();
+    setInput(text);
+    fromSuggestion.current = true;
+    dictated.current = { used: false, confidence: null };
+    inputRef.current?.focus();
   };
 
   const send = async () => {
     const text = input.trim();
     if (!scenario || !text || busy) return;
-    listener.current?.stop();
+    stopMic();
     const voice = dictated.current;
+    const usedHelp = { level: helpLevel, suggestion: fromSuggestion.current };
     dictated.current = { used: false, confidence: null };
     setInput("");
     setBusy(true);
@@ -104,8 +170,15 @@ export function Chat({ onClose }: { onClose: () => void }) {
     sound.play("send");
     setTurns((t) => [...t, { role: "user", text, clarity: voice.used ? voice.confidence : undefined }]);
     try {
-      const r = await postChat(scenario.id, text, conversationId, voice.used);
+      const r = await postChat(scenario.id, text, {
+        conversationId,
+        spoken: voice.used,
+        helpLevel: usedHelp.level,
+        fromSuggestion: usedHelp.suggestion,
+        noHelp,
+      });
       setConversationId(r.conversationId);
+      resetHelp(noHelp ? null : (r.help ?? null));
       sound.play("receive");
       if (r.correction.errors.length) window.setTimeout(() => sound.play("fix"), 220);
       else window.setTimeout(() => sound.play("correct"), 220);
@@ -125,6 +198,28 @@ export function Chat({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const finish = async () => {
+    if (conversationId === undefined || summarizing) return;
+    stopMic();
+    stopSpeaking();
+    setSummarizing(true);
+    setError(null);
+    try {
+      setSummary(await getMissionSummary(conversationId));
+      sound.play("complete");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
+  const backToMissions = () => {
+    setScenario(null);
+    setSummary(null);
+    getPracticed().then((p) => setPracticed(p.practiced)).catch(() => undefined);
+  };
+
   if (!scenario) {
     return (
       <section>
@@ -132,10 +227,17 @@ export function Chat({ onClose }: { onClose: () => void }) {
         <h2>Choose a mission</h2>
         <div className="missions">
           {scenarios.map((s) => (
-            <button key={s.id} className="card mission" onClick={() => start(s)}>
-              <strong>{s.title}</strong>
-              <span>{s.description}</span>
-            </button>
+            <div key={s.id} className="mission-wrap">
+              <button className="card mission" onClick={() => start(s)}>
+                <strong>{s.title}</strong>
+                <span>{s.description}</span>
+              </button>
+              {practiced[s.id] > 0 && (
+                <div className="mission-extra">
+                  <button className="mini" onClick={() => start(s, true)}>🚫 Retry without help</button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
         {error && <p className="error">{error}</p>}
@@ -143,17 +245,37 @@ export function Chat({ onClose }: { onClose: () => void }) {
     );
   }
 
+  if (summary) {
+    return (
+      <MissionSummary
+        data={summary}
+        onRetryNoHelp={() => start(scenario, true)}
+        onMissions={backToMissions}
+        onHome={onClose}
+      />
+    );
+  }
+
+  const userTurns = turns.filter((t) => t.role === "user").length;
   return (
     <section>
       <div className="chat-head">
-        <button className="ghost" onClick={onClose}>← End mission</button>
-        {canSpeak() && (
-          <button className={`chip ${autoSpeak ? "active" : ""}`} aria-pressed={autoSpeak} onClick={toggleAutoSpeak}>
-            🔈 Read replies aloud
-          </button>
-        )}
+        <button className="ghost" onClick={backToMissions}>← Missions</button>
+        <div className="chips">
+          {canSpeak() && (
+            <button className={`chip ${autoSpeak ? "active" : ""}`} aria-pressed={autoSpeak} onClick={toggleAutoSpeak}>
+              🔈 Read replies aloud
+            </button>
+          )}
+          {userTurns > 0 && conversationId !== undefined && (
+            <button className="chip" disabled={summarizing || busy} onClick={() => void finish()}>
+              {summarizing ? "Summarizing…" : "✅ Finish & summary"}
+            </button>
+          )}
+        </div>
       </div>
       <h2>{scenario.title}</h2>
+      {noHelp && <p className="nohelp-banner">🚫 No-help run: suggestions are off. Answer on your own.</p>}
       <div className="chat">
         {turns.map((t, i) => (
           <div key={i} className={`bubble ${t.role}`}>
@@ -170,6 +292,22 @@ export function Chat({ onClose }: { onClose: () => void }) {
       </div>
       {error && <p className="error">{error}</p>}
       {!canListen() && <p className="muted">Voice input works in Chrome, Edge or Safari.</p>}
+      {!noHelp && !busy && (
+        <HelpPanel
+          help={help}
+          loading={helpLoading}
+          error={helpError}
+          level={helpLevel}
+          open={helpOpen}
+          onToggle={() => void toggleHelp()}
+          onReveal={(l) => setHelpLevel((cur) => Math.max(cur, l))}
+          onUse={(text) => {
+            setHelpLevel((cur) => Math.max(cur, 2));
+            useText(text);
+          }}
+          onMicStart={stopMic}
+        />
+      )}
       <form
         className="composer"
         onSubmit={(e) => {
@@ -182,7 +320,16 @@ export function Chat({ onClose }: { onClose: () => void }) {
             {listening ? "■" : "🎤"}
           </button>
         )}
-        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder={listening ? "Listening… speak in English" : "Write or speak in English…"} maxLength={1000} />
+        <input
+          ref={inputRef}
+          value={input}
+          onChange={(e) => {
+            setInput(e.target.value);
+            if (!e.target.value) fromSuggestion.current = false;
+          }}
+          placeholder={listening ? "Listening… speak in English" : "Write or speak in English…"}
+          maxLength={1000}
+        />
         <button className="primary" disabled={busy || !input.trim()}>Send</button>
       </form>
     </section>

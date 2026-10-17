@@ -1,11 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
+import { parseStructured, type ChatMessage } from "./claude.js";
+import { HELP_INSTRUCTIONS, HelpSchema, type Help } from "./help.js";
 import type { Scenario } from "./scenarios.js";
 
 export const ERROR_CATEGORIES = ["grammar", "tense", "preposition", "vocabulary", "word-order", "spelling", "other"] as const;
 
-const TutorOutput = z.object({
+const Base = z.object({
   reply: z.string(),
   correction: z.object({
     corrected: z.string(),
@@ -20,24 +21,25 @@ const TutorOutput = z.object({
     ),
   }),
 });
+const WithHelp = Base.extend({ help: HelpSchema });
 
-export type TutorResult = z.infer<typeof TutorOutput>;
+export type TutorResult = z.infer<typeof Base> & { help?: Help };
 
 export interface TutorInput {
   scenario: Scenario;
   level: string;
-  history: { role: "user" | "assistant"; content: string }[];
+  history: ChatMessage[];
   message: string;
   /** True when the message came from speech recognition. */
   spoken?: boolean;
+  /** "No safety net" runs skip generating help for the next question. */
+  noHelp?: boolean;
 }
 
 export type Tutor = (input: TutorInput) => Promise<TutorResult>;
 
-const model = () => process.env.CLAUDE_MODEL ?? "claude-opus-5-5";
-
 export function createClaudeTutor(client = new Anthropic()): Tutor {
-  return async ({ scenario, level, history, message, spoken }) => {
+  return ({ scenario, level, history, message, spoken, noHelp }) => {
     const system = [
       scenario.roleplay,
       `The user is a Spanish speaker learning English, CEFR level ${level}, preparing for tech jobs in the USA.`,
@@ -46,20 +48,16 @@ export function createClaudeTutor(client = new Anthropic()): Tutor {
         ? "The user's latest message was dictated with speech recognition: ignore capitalization and punctuation, and treat odd words as possible mispronunciations (mention a likely mispronunciation in explanation_es when it seems clear)."
         : "",
       "Also correct the user's latest message: `corrected` is the minimally fixed sentence, `natural` is how a native speaker would say it, `explanation_es` is a brief explanation in Spanish of the mistakes (empty string if there were none), and `errors` lists each mistake (empty if none). If the message is already correct, return it unchanged in `corrected` and `natural`.",
-    ].filter(Boolean).join("\n");
+      noHelp ? "" : HELP_INSTRUCTIONS,
+    ]
+      .filter(Boolean)
+      .join("\n");
 
-    const response = await client.beta.messages.parse({
-      model: model(),
-      max_tokens: 4000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
+    return parseStructured(client, {
       system,
-      output_config: { effort: "low", format: zodOutputFormat(TutorOutput) },
       messages: [...history, { role: "user", content: message }],
+      schema: noHelp ? Base : WithHelp,
+      maxTokens: 6000,
     });
-    if (response.stop_reason === "refusal" || !response.parsed_output) {
-      throw new Error("The tutor could not produce a response");
-    }
-    return response.parsed_output;
   };
 }
