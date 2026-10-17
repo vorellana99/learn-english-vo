@@ -69,6 +69,10 @@ and (loaded the first time you open it, one extra call per answer, then stored) 
 with translation / listen / practice / save, key vocabulary, what the question expected, a tip, and pronunciation
 notes when you dictated the answer. The mission summary shows your average score.
 
+Each answer also earns XP by score (90+ → 8, 75+ → 5, 60+ → 3, 40+ → 2, otherwise 1), counts for your streak and your
+daily goal, and the progress panel shows your 30-day average, the average per mission and the trend of your latest
+answers, colored with the same five levels.
+
 ## Spanish translations
 
 A reusable `Translate` component (`client/src/Translate.tsx`) puts a translator icon button (an "A" next to a Japanese-style character, drawn as SVG) next to English text; pressing it shows

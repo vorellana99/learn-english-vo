@@ -1,5 +1,6 @@
 import type { DB } from "./db.js";
 import { LEVELS } from "./progress.js";
+import { findScenario } from "./scenarios.js";
 import { shadowingStats } from "./shadowing.js";
 
 export type Mode = "quick" | "normal" | "long";
@@ -115,6 +116,7 @@ export function buildInsights(db: DB, tzOffsetMin: number) {
     .prepare(
       `SELECT date(t, ?) AS day, COUNT(*) AS reviews FROM (
          SELECT reviewed_at AS t FROM reviews UNION ALL SELECT created_at FROM shadow_attempts
+         UNION ALL SELECT created_at FROM messages WHERE role = 'user'
        ) WHERE t >= datetime('now', '-15 days') GROUP BY day ORDER BY day`,
     )
     .all(localShift) as { day: string; reviews: number }[];
@@ -143,5 +145,32 @@ export function buildInsights(db: DB, tzOffsetMin: number) {
     bestHour,
     activeDays: days,
     shadowing: shadowingStats(db),
+    conversation: conversationStats(db),
   };
+}
+
+/** Scores of your answers in conversation missions: last 30 days overall, by mission and the latest answers. */
+export function conversationStats(db: DB) {
+  const total = db
+    .prepare(
+      `SELECT COUNT(*) AS answers, AVG(score) AS avg FROM messages
+       WHERE role = 'user' AND score IS NOT NULL AND created_at >= datetime('now', '-30 days')`,
+    )
+    .get() as { answers: number; avg: number | null };
+  const byScenario = (
+    db
+      .prepare(
+        `SELECT c.scenario_id AS scenarioId, COUNT(*) AS answers, AVG(m.score) AS avg FROM messages m
+         JOIN conversations c ON c.id = m.conversation_id
+         WHERE m.role = 'user' AND m.score IS NOT NULL AND m.created_at >= datetime('now', '-30 days')
+         GROUP BY c.scenario_id ORDER BY answers DESC, c.scenario_id LIMIT 5`,
+      )
+      .all() as { scenarioId: string; answers: number; avg: number }[]
+  ).map((r) => ({ scenarioId: r.scenarioId, title: findScenario(r.scenarioId)?.title ?? r.scenarioId, answers: r.answers, avgScore: Math.round(r.avg) }));
+  const recent = (
+    db.prepare("SELECT score FROM messages WHERE role = 'user' AND score IS NOT NULL ORDER BY id DESC LIMIT 20").all() as { score: number }[]
+  )
+    .map((r) => r.score)
+    .reverse();
+  return { answers: total.answers, avgScore: total.avg === null ? null : Math.round(total.avg), byScenario, recent };
 }

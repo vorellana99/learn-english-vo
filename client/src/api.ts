@@ -45,6 +45,13 @@ export interface Insights {
   bestHour: number | null;
   activeDays: { day: string; reviews: number }[];
   shadowing: { attempts: number; avgScore: number | null; hardWords: { word: string; count: number }[] };
+  conversation: {
+    answers: number;
+    avgScore: number | null;
+    byScenario: { scenarioId: string; title: string; answers: number; avgScore: number }[];
+    /** Scores of the latest answers, oldest first. */
+    recent: number[];
+  };
 }
 export const getInsights = () =>
   fetch(`/api/insights?tz=${tz()}`).then((r) => json<Insights>(r));
@@ -102,11 +109,11 @@ export async function postChat(scenarioId: string, message: string, opts: ChatOp
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ scenarioId, message, ...opts }),
+    body: JSON.stringify({ scenarioId, message, tz: new Date().getTimezoneOffset(), ...opts }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? `Request failed: ${res.status}`);
-  return data as { conversationId: number; messageId: number; reply: string; reply_es: string; correction: Correction; help?: Help };
+  return data as { conversationId: number; messageId: number; xpAwarded: number; reply: string; reply_es: string; correction: Correction; help?: Help };
 }
 
 export interface RunStats {

@@ -13,6 +13,8 @@ interface Props {
   correction: Correction;
   /** Speech-recognition confidence (0-1) when the answer was dictated. */
   clarity?: number | null;
+  /** XP this answer earned. */
+  xp?: number;
   onMicStart: () => void;
 }
 
@@ -20,7 +22,7 @@ interface Props {
  * Under each answer of yours: a round score badge and a "Details" button. The details panel shows the tutor's feedback
  * right away and loads the extras (other ways to say it, vocabulary, tips) the first time it is opened.
  */
-export function AnswerFeedback({ conversationId, messageId, correction, clarity, onMicStart }: Props) {
+export function AnswerFeedback({ conversationId, messageId, correction, clarity, xp, onMicStart }: Props) {
   const band = scoreBand(correction.score);
   const [open, setOpen] = useState(false);
   const [details, setDetails] = useState<AnswerDetails | null>(null);
@@ -65,6 +67,7 @@ export function AnswerFeedback({ conversationId, messageId, correction, clarity,
       <div className="feedback-row">
         <ScoreBadge score={correction.score} />
         <span className="band-label">{band.label}</span>
+        {xp ? <span className="xp-gain">+{xp} XP</span> : null}
         <button className="mini" aria-expanded={open} onClick={toggle}>
           Details {open ? "▴" : "▾"}
         </button>

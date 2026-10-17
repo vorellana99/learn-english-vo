@@ -14,6 +14,8 @@ interface Turn {
   es?: string;
   /** Id of the stored answer, needed to load its details. */
   messageId?: number;
+  /** XP earned by this answer. */
+  xp?: number;
   correction?: Correction;
   /** Speech-recognition confidence (0-1) when the message was dictated. */
   clarity?: number | null;
@@ -204,7 +206,7 @@ export function Chat({ onClose }: { onClose: () => void }) {
       if (autoSpeak) window.setTimeout(() => speak(r.reply), 500);
       setTurns((t) => {
         const copy = [...t];
-        copy[copy.length - 1] = { ...copy[copy.length - 1], correction: r.correction, messageId: r.messageId };
+        copy[copy.length - 1] = { ...copy[copy.length - 1], correction: r.correction, messageId: r.messageId, xp: r.xpAwarded };
         return [...copy, { role: "assistant", text: r.reply, es: r.reply_es }];
       });
     } catch (e) {
@@ -316,6 +318,7 @@ export function Chat({ onClose }: { onClose: () => void }) {
                 messageId={t.messageId}
                 correction={t.correction}
                 clarity={t.clarity}
+                xp={t.xp}
                 onMicStart={stopMic}
               />
             )}

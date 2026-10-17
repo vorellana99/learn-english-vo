@@ -3,7 +3,7 @@ import type { DB } from "./db.js";
 import type { ChatMessage } from "./claude.js";
 import { createClaudeDetailer, type Detailer } from "./details.js";
 import { createClaudeHelper, createClaudeIdeasHelper, type HelpIdeas, type HelpRest, type Helper, type IdeasHelper } from "./help.js";
-import { levelFor } from "./progress.js";
+import { answerXp, levelFor, nextStreak } from "./progress.js";
 import { findScenario } from "./scenarios.js";
 import { createClaudeSummarizer, type Summarizer } from "./summary.js";
 import { createClaudeTutor, type Tutor } from "./tutor.js";
@@ -44,7 +44,14 @@ const MAX_MESSAGE = 1000;
 
 const clampScore = (n: number) => Math.max(0, Math.min(100, Math.round(Number.isFinite(n) ? n : 0)));
 
-export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
+export function mountChat(
+  app: express.Express,
+  db: DB,
+  deps: ChatDeps = {},
+  /** The client's local date (see app.ts) so the streak rolls over at its midnight. */
+  today: (tz: number) => string = () => new Date().toISOString().slice(0, 10),
+  tzOf: (v: unknown) => number = () => 0,
+) {
   let { tutor, helper, ideasHelper, summarizer, detailer } = deps;
 
   const level = () => levelFor((db.prepare("SELECT xp FROM profile WHERE id = 1").get() as { xp: number }).xp).level;
@@ -84,7 +91,7 @@ export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
   };
 
   app.post("/api/chat", async (req, res) => {
-    const { scenarioId, conversationId, message, spoken, clarity, helpLevel, fromSuggestion, noHelp } = req.body ?? {};
+    const { scenarioId, conversationId, message, spoken, clarity, helpLevel, fromSuggestion, noHelp, tz } = req.body ?? {};
     const scenario = typeof scenarioId === "string" ? findScenario(scenarioId) : undefined;
     if (!scenario || typeof message !== "string" || !message.trim() || message.length > MAX_MESSAGE) {
       res.status(400).json({ error: `valid scenarioId and message (max ${MAX_MESSAGE} chars) are required` });
@@ -123,6 +130,8 @@ export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
       const hint = Number.isInteger(helpLevel) ? Math.max(0, Math.min(3, helpLevel)) : 0;
       const correction = { ...result.correction, score: clampScore(result.correction.score) };
       const heardClarity = spoken === true && typeof clarity === "number" && clarity >= 0 && clarity <= 1 ? clarity : null;
+      const xpAwarded = answerXp(correction.score);
+      const date = today(tzOf(tz));
       const messageId = db.transaction(() => {
         if (conversationId === undefined) {
           db.prepare("INSERT INTO messages (conversation_id, role, content) VALUES (?, 'assistant', ?)").run(convId, scenario.opener);
@@ -153,9 +162,11 @@ export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
             lvl,
           );
         }
+        const p = db.prepare("SELECT xp, streak, last_active AS lastActive FROM profile WHERE id = 1").get() as { xp: number; streak: number; lastActive: string | null };
+        db.prepare("UPDATE profile SET xp = ?, streak = ?, last_active = ? WHERE id = 1").run(p.xp + xpAwarded, nextStreak(p.streak, p.lastActive, date), date);
         return Number(inserted.lastInsertRowid);
       })();
-      res.json({ conversationId: convId, messageId, reply: result.reply, reply_es: result.reply_es, correction, help });
+      res.json({ conversationId: convId, messageId, xpAwarded, reply: result.reply, reply_es: result.reply_es, correction, help });
     } catch (err) {
       console.error(err);
       res.status(502).json({ error: "The tutor is unavailable right now, try again" });

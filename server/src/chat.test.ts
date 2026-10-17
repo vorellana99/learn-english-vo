@@ -4,6 +4,7 @@ import { createApp } from "./app.js";
 import type { Help } from "./help.js";
 import type { TutorInput } from "./tutor.js";
 import type { Details, DetailsInput } from "./details.js";
+import { answerXp } from "./progress.js";
 
 const help: Help = {
   ideas: [
@@ -222,6 +223,63 @@ describe("answer scores and details", () => {
     expect((await post("/api/chat/details", { conversationId: a.conversationId, messageId: 9999 })).status).toBe(404);
     expect((await post("/api/chat/details", { conversationId: a.conversationId, messageId: other.messageId })).status).toBe(404);
     expect((await post("/api/chat/details", {})).status).toBe(404);
+    server.close();
+  });
+});
+
+describe("XP and progress from answers", () => {
+  it("maps scores to XP", () => {
+    expect([100, 90, 89, 75, 74, 60, 59, 40, 39, 0].map(answerXp)).toEqual([8, 8, 5, 5, 3, 3, 2, 2, 1, 1]);
+  });
+
+  it("awards XP by score, starts the streak and counts the answer as practice", async () => {
+    const { server, base, post, setScore } = await setup();
+    setScore(95);
+    const a = await (await post("/api/chat", { scenarioId: "standup", message: "one" })).json();
+    expect(a.xpAwarded).toBe(8);
+    setScore(30);
+    const b = await (await post("/api/chat", { scenarioId: "standup", conversationId: a.conversationId, message: "two" })).json();
+    expect(b.xpAwarded).toBe(1);
+
+    const profile = await (await fetch(`${base}/api/profile`)).json();
+    expect(profile.xp).toBe(9);
+    expect(profile.streak).toBe(1);
+    expect(profile.reviewedToday).toBe(true);
+
+    const insights = await (await fetch(`${base}/api/insights`)).json();
+    expect(insights.activeDays.at(-1).reviews).toBe(2);
+    server.close();
+  });
+
+  it("uses the client's local day for the streak", async () => {
+    const { db, server, post } = await setup();
+    await post("/api/chat", { scenarioId: "standup", message: "one", tz: -840 });
+    const local = new Date(Date.now() + 840 * 60_000).toISOString().slice(0, 10);
+    expect(db.prepare("SELECT last_active AS d FROM profile").get()).toEqual({ d: local });
+    server.close();
+  });
+
+  it("reports conversation scores overall, by mission and the latest answers", async () => {
+    const { server, base, post, setScore } = await setup();
+    for (const [scenarioId, score] of [["standup", 80], ["standup", 60], ["code-review", 90]] as const) {
+      setScore(score);
+      await post("/api/chat", { scenarioId, message: `answer ${score}` });
+    }
+    const c = (await (await fetch(`${base}/api/insights`)).json()).conversation;
+    expect(c.answers).toBe(3);
+    expect(c.avgScore).toBe(77);
+    expect(c.byScenario).toEqual([
+      { scenarioId: "standup", title: "Daily standup", answers: 2, avgScore: 70 },
+      { scenarioId: "code-review", title: "Code review conversation", answers: 1, avgScore: 90 },
+    ]);
+    expect(c.recent).toEqual([80, 60, 90]);
+    server.close();
+  });
+
+  it("reports no conversation scores before any answer", async () => {
+    const { server, base } = await setup();
+    const c = (await (await fetch(`${base}/api/insights`)).json()).conversation;
+    expect(c).toEqual({ answers: 0, avgScore: null, byScenario: [], recent: [] });
     server.close();
   });
 });

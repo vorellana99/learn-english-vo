@@ -7,6 +7,9 @@ export const LEVELS = [
 
 export const XP_PER_RATING = [2, 5, 10, 15] as const;
 
+/** XP for one answer in a conversation mission, from its 0-100 score. */
+export const answerXp = (score: number) => (score >= 90 ? 8 : score >= 75 ? 5 : score >= 60 ? 3 : score >= 40 ? 2 : 1);
+
 export function levelFor(xp: number) {
   let idx = 0;
   LEVELS.forEach((l, i) => {

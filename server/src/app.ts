@@ -98,7 +98,7 @@ export function createApp(db: DB, tutor?: Tutor, evaluator?: Evaluator, extras: 
     });
   });
 
-  mountChat(app, db, { tutor, ...extras });
+  mountChat(app, db, { tutor, ...extras }, today, tzOf);
   mountInterviews(app, db, today, tzOf, evaluator);
   mountShadowing(app, db, today, tzOf);
 
