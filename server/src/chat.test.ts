@@ -28,7 +28,7 @@ const correction = (errors: number) => ({
 async function setup() {
   const db = openDb(":memory:");
   const tutorCalls: TutorInput[] = [];
-  const helperCalls: { question: string }[] = [];
+  const helperCalls: { part: string; question: string }[] = [];
   let summaries = 0;
   const server = createApp(
     db,
@@ -39,8 +39,12 @@ async function setup() {
     undefined,
     {
       helper: async (input) => {
-        helperCalls.push({ question: input.question });
-        return help;
+        helperCalls.push({ part: "rest", question: input.question });
+        return { starter: help.starter, starter_es: help.starter_es, suggestions: help.suggestions };
+      },
+      ideasHelper: async (input) => {
+        helperCalls.push({ part: "ideas", question: input.question });
+        return { ideas: help.ideas };
       },
       summarizer: async (input) => {
         summaries++;
@@ -76,21 +80,31 @@ describe("reply suggestions", () => {
     server.close();
   });
 
-  it("builds opener help once per scenario and level, then serves it from the cache", async () => {
+  it("builds the opener help one step at a time and caches each step", async () => {
     const { server, post, helperCalls } = await setup();
-    const a = await (await post("/api/chat/help", { scenarioId: "standup" })).json();
-    const b = await (await post("/api/chat/help", { scenarioId: "standup" })).json();
-    expect(a.help).toEqual(b.help);
-    expect(helperCalls.length).toBe(1);
-    expect((await post("/api/chat/help", { scenarioId: "nope" })).status).toBe(400);
-    expect((await post("/api/chat/help", { scenarioId: "standup", conversationId: 999 })).status).toBe(404);
+    const ideas1 = await (await post("/api/chat/help", { scenarioId: "standup", part: "ideas" })).json();
+    const ideas2 = await (await post("/api/chat/help", { scenarioId: "standup", part: "ideas" })).json();
+    expect(ideas1.help).toEqual({ ideas: help.ideas });
+    expect(ideas2.help).toEqual(ideas1.help);
+    expect(helperCalls.map((c) => c.part)).toEqual(["ideas"]); // the second request came from the cache
+
+    const rest = await (await post("/api/chat/help", { scenarioId: "standup", part: "rest" })).json();
+    expect(rest.help.suggestions.map((s: { level: string }) => s.level)).toEqual(["simple", "medium", "natural"]);
+    expect(rest.help).not.toHaveProperty("ideas");
+    await post("/api/chat/help", { scenarioId: "standup", part: "rest" });
+    expect(helperCalls.map((c) => c.part)).toEqual(["ideas", "rest"]);
+
+    expect((await post("/api/chat/help", { scenarioId: "nope", part: "ideas" })).status).toBe(400);
+    expect((await post("/api/chat/help", { scenarioId: "standup" })).status).toBe(400);
+    expect((await post("/api/chat/help", { scenarioId: "standup", part: "all" })).status).toBe(400);
+    expect((await post("/api/chat/help", { scenarioId: "standup", part: "ideas", conversationId: 999 })).status).toBe(404);
     server.close();
   });
 
   it("asks for help about the latest interviewer message in an ongoing conversation", async () => {
     const { server, post, helperCalls } = await setup();
     const r = await (await post("/api/chat", { scenarioId: "standup", message: "Yesterday I fixed bugs" })).json();
-    await post("/api/chat/help", { scenarioId: "standup", conversationId: r.conversationId });
+    await post("/api/chat/help", { scenarioId: "standup", conversationId: r.conversationId, part: "ideas" });
     expect(helperCalls[0].question).toBe("Nice! Tell me more.");
     server.close();
   });

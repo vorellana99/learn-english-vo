@@ -31,7 +31,9 @@ npm run dev
 
 A variable already exported in your shell takes precedence over `.env`.
 
-The model defaults to `claude-opus-5-5` (override with `CLAUDE_MODEL`). Every message you write is corrected
+The model defaults to `claude-opus-5-5` (override with `CLAUDE_MODEL`). One small job, the step-1 **ideas** of the help ladder, uses
+a fast model instead, `claude-haiku-5-5` by default (override with `CLAUDE_FAST_MODEL`), with thinking off and low effort;
+if that call fails it is retried once with the main model. Every message you write is corrected
 (in Spanish) and each mistake is saved and turned into a review card. Server-side refusal fallbacks are enabled.
 
 ## Voice
@@ -50,8 +52,10 @@ Hidden by default. Press 💡 "Need help answering?" on any question to open a h
 3. **Full answers** - three versions (Simple, Medium, Natural) with Spanish translation. Each one can be inserted
    in the text box, listened to, practiced out loud (word-by-word match) or saved as a review card.
 
-The help for each next question is generated in the same call as the tutor's reply, so it costs no extra request; the
-opening question's help is requested the first time you open the panel and cached per mission and level. How much help
+The help for each next question is generated in the same call as the tutor's reply, so it costs no extra request. For
+the opening question help is loaded one step at a time: opening the panel requests only the ideas (fast model), and the
+starter plus the full answers (main model) are requested when you ask for the starter. Every step is cached per mission
+and level. How much help
 you used is stored per answer. "✅ Finish & summary" gives a recap with your conversation rewritten more naturally,
 phrases to keep and a comparison with your previous run. "🚫 Retry without help" repeats a mission with help disabled.
 

@@ -1,7 +1,7 @@
 import express from "express";
 import type { DB } from "./db.js";
 import type { ChatMessage } from "./claude.js";
-import { createClaudeHelper, type Help, type Helper } from "./help.js";
+import { createClaudeHelper, createClaudeIdeasHelper, type HelpIdeas, type HelpRest, type Helper, type IdeasHelper } from "./help.js";
 import { levelFor } from "./progress.js";
 import { findScenario } from "./scenarios.js";
 import { createClaudeSummarizer, type Summarizer } from "./summary.js";
@@ -9,7 +9,10 @@ import { createClaudeTutor, type Tutor } from "./tutor.js";
 
 export interface ChatDeps {
   tutor?: Tutor;
+  /** Step 2 and 3 of the help ladder (starter and full answers). */
   helper?: Helper;
+  /** Step 1 of the help ladder (ideas), meant for a fast model. */
+  ideasHelper?: IdeasHelper;
   summarizer?: Summarizer;
 }
 
@@ -34,7 +37,7 @@ export interface RunStats {
 const MAX_MESSAGE = 1000;
 
 export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
-  let { tutor, helper, summarizer } = deps;
+  let { tutor, helper, ideasHelper, summarizer } = deps;
 
   const level = () => levelFor((db.prepare("SELECT xp FROM profile WHERE id = 1").get() as { xp: number }).xp).level;
 
@@ -134,12 +137,13 @@ export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
     }
   });
 
-  // Help for the question currently on screen. Opening-question help is cached per scenario and level.
+  // Help for the question currently on screen, one step at a time: `part` is "ideas" (fast model) or "rest" (starter and
+  // full answers). Opening-question help is cached per scenario, level and part.
   app.post("/api/chat/help", async (req, res) => {
-    const { scenarioId, conversationId } = req.body ?? {};
+    const { scenarioId, conversationId, part } = req.body ?? {};
     const scenario = typeof scenarioId === "string" ? findScenario(scenarioId) : undefined;
-    if (!scenario) {
-      res.status(400).json({ error: "valid scenarioId is required" });
+    if (!scenario || (part !== "ideas" && part !== "rest")) {
+      res.status(400).json({ error: 'valid scenarioId and part ("ideas" or "rest") are required' });
       return;
     }
     let question = scenario.opener;
@@ -157,19 +161,27 @@ export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
       }
     }
     const lvl = level();
-    const cacheKey = `v2:${scenario.id}:${lvl}`; // bump the prefix when the Help shape changes
+    const cacheKey = `v3:${scenario.id}:${lvl}:${part}`; // bump the prefix when the help shape changes
     const isOpener = question === scenario.opener && history.length === 0;
     if (isOpener) {
       const cached = db.prepare("SELECT json FROM help_cache WHERE key = ?").get(cacheKey) as { json: string } | undefined;
       if (cached) {
-        res.json({ help: JSON.parse(cached.json) as Help });
+        res.json({ help: JSON.parse(cached.json) as HelpIdeas | HelpRest });
         return;
       }
     }
-    const h = resolve(helper, () => (helper = createClaudeHelper()), res);
-    if (!h) return;
+    const input = { scenario, level: lvl, question, history };
+    let help: HelpIdeas | HelpRest;
     try {
-      const help = await h({ scenario, level: lvl, question, history });
+      if (part === "ideas") {
+        const h = resolve(ideasHelper, () => (ideasHelper = createClaudeIdeasHelper()), res);
+        if (!h) return;
+        help = await h(input);
+      } else {
+        const h = resolve(helper, () => (helper = createClaudeHelper()), res);
+        if (!h) return;
+        help = await h(input);
+      }
       if (isOpener) db.prepare("INSERT OR REPLACE INTO help_cache (key, json) VALUES (?, ?)").run(cacheKey, JSON.stringify(help));
       res.json({ help });
     } catch (err) {

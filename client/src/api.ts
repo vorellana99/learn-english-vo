@@ -173,8 +173,12 @@ export const getShadowingSession = (count = 5) =>
 export const postShadowingResult = (cardId: number, score: number, missed: string[]) =>
   post<{ xpAwarded: number } & Profile>("/api/shadowing/result", { cardId, score, missed, tz: new Date().getTimezoneOffset() });
 
-export const getHelp = (scenarioId: string, conversationId?: number) =>
-  post<{ help: Help }>("/api/chat/help", { scenarioId, conversationId });
+/** Help arrives in two parts: "ideas" (step 1, fast model) and "rest" (starter and full answers, steps 2 and 3). */
+export type HelpPart = "ideas" | "rest";
+export type HelpState = Partial<Help>;
+
+export const getHelp = (scenarioId: string, conversationId: number | undefined, part: HelpPart) =>
+  post<{ help: HelpState }>("/api/chat/help", { scenarioId, conversationId, part });
 export const getMissionSummary = (conversationId: number) => post<MissionSummary>("/api/chat/summary", { conversationId });
 export const getPracticed = () => fetch("/api/chat/practiced").then((r) => json<{ practiced: Record<string, number> }>(r));
 export const savePhrase = (front: string, back: string) => post<{ saved: boolean }>("/api/phrases", { front, back });

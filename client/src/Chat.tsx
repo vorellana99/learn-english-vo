@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { getHelp, getMissionSummary, getPracticed, getScenarios, postChat, type Correction, type Help, type MissionSummary as SummaryData, type Scenario } from "./api";
+import { getHelp, getMissionSummary, getPracticed, getScenarios, postChat, type Correction, type HelpPart, type HelpState, type MissionSummary as SummaryData, type Scenario } from "./api";
 import { HelpPanel } from "./HelpPanel";
 import { MissionSummary } from "./MissionSummary";
 import { Translate } from "./Translate";
@@ -40,10 +40,10 @@ export function Chat({ onClose }: { onClose: () => void }) {
   const [summarizing, setSummarizing] = useState(false);
 
   // Help for the question currently on screen. It starts hidden and resets with every new question.
-  const [help, setHelp] = useState<Help | null>(null);
+  const [help, setHelp] = useState<HelpState | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpLevel, setHelpLevel] = useState(0);
-  const [helpLoading, setHelpLoading] = useState(false);
+  const [helpLoading, setHelpLoading] = useState<HelpPart | null>(null);
   const [helpError, setHelpError] = useState<string | null>(null);
   const fromSuggestion = useRef(false);
 
@@ -66,7 +66,7 @@ export function Chat({ onClose }: { onClose: () => void }) {
     getPracticed().then((p) => setPracticed(p.practiced)).catch(() => undefined);
   }, []);
 
-  const resetHelp = (next: Help | null) => {
+  const resetHelp = (next: HelpState | null) => {
     setHelp(next);
     setHelpOpen(false);
     setHelpLevel(0);
@@ -129,8 +129,26 @@ export function Chat({ onClose }: { onClose: () => void }) {
     if (autoSpeak) speak(s.opener);
   };
 
-  // The opening question has no help yet: it is requested the first time the panel is opened.
-  const toggleHelp = async () => {
+  // Help is loaded one step at a time. Replies from the tutor already carry all of it; for the opening question the
+  // ideas are requested when the panel opens and the starter and answers when the starter is asked for.
+  const loadHelp = async (part: HelpPart) => {
+    if (!scenario || helpLoading) return;
+    setHelpLoading(part);
+    setHelpError(null);
+    try {
+      const r = await getHelp(scenario.id, conversationId, part);
+      setHelp((cur) => ({ ...cur, ...r.help }));
+    } catch (e) {
+      setHelpError((e as Error).message);
+    } finally {
+      setHelpLoading(null);
+    }
+  };
+
+  const needs = (part: HelpPart, current: HelpState | null) =>
+    part === "ideas" ? !current?.ideas : !current?.starter || !current?.suggestions;
+
+  const toggleHelp = () => {
     sound.play("click");
     if (helpOpen) {
       setHelpOpen(false);
@@ -138,17 +156,12 @@ export function Chat({ onClose }: { onClose: () => void }) {
     }
     setHelpOpen(true);
     setHelpLevel((l) => Math.max(l, 1));
-    if (!help && scenario && !helpLoading) {
-      setHelpLoading(true);
-      setHelpError(null);
-      try {
-        setHelp((await getHelp(scenario.id, conversationId)).help);
-      } catch (e) {
-        setHelpError((e as Error).message);
-      } finally {
-        setHelpLoading(false);
-      }
-    }
+    if (needs("ideas", help)) void loadHelp("ideas");
+  };
+
+  const revealHelp = (level: number) => {
+    setHelpLevel((cur) => Math.max(cur, level));
+    if (level >= 2 && needs("rest", help)) void loadHelp("rest");
   };
 
   const useText = (text: string) => {
@@ -307,8 +320,9 @@ export function Chat({ onClose }: { onClose: () => void }) {
           error={helpError}
           level={helpLevel}
           open={helpOpen}
-          onToggle={() => void toggleHelp()}
-          onReveal={(l) => setHelpLevel((cur) => Math.max(cur, l))}
+          onToggle={toggleHelp}
+          onReveal={revealHelp}
+          onRetry={(part) => void loadHelp(part)}
           onUse={(text) => {
             setHelpLevel((cur) => Math.max(cur, 2));
             useText(text);
