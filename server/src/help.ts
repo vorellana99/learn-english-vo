@@ -29,7 +29,7 @@ const HELP_INTRO = "For `help`, assume the user must now answer your latest mess
 const IDEAS_PART =
   "`ideas` has 3-5 short English noun phrases or key phrases of what they could mention (2-5 words each, at the user's level), each with its Spanish meaning in `es`; ";
 const REST_PART =
-  "`starter` is the first words of an English answer ending in '...' for them to complete, and `starter_es` its Spanish translation; `suggestions` has exactly three English answers in this order - `simple` (1-2 short sentences at the user's CEFR level), `medium` (a bit richer, one level up) and `natural` (how a confident B2 speaker would say it) - each with a Spanish `translation_es`. Make them believable for a software developer and put personal facts the user must fill in inside [brackets], for example [your role] or [number] years.";
+  "`starter` is the first words of an English answer ending in '...' for them to complete, and `starter_es` its Spanish translation; `suggestions` has exactly three English answers in this order - `simple` (1-2 short sentences at the user's CEFR level), `medium` (a bit richer, one level up) and `natural` (how a confident B2 speaker would say it) - each with a Spanish `translation_es`. Write complete, concrete sentences that are ready to say out loud: pick the most likely, believable details for a software developer (for example a job title, a number of years, real technologies or a typical project) and never use placeholders, brackets or blanks. The user can edit the details afterwards.";
 
 /** Prompt fragment used by the tutor, which returns all of the help together with its reply. */
 export const HELP_INSTRUCTIONS = HELP_INTRO + IDEAS_PART + REST_PART;

@@ -59,7 +59,7 @@ export function createClaudeEvaluator(client = new Anthropic()): Evaluator {
       "Judge two things: English proficiency (fluency, grammar, vocabulary) and interview effectiveness (structure such as STAR, specific examples, professionalism).",
       "Be honest and calibrated, not flattering. Scores are 0-100 and `overall` should reflect how a US interviewer would perceive the candidate. `cefr` is your estimate of the English level shown in the answers.",
       "Write summary_es, strengths, improvements and feedback_es in Spanish. Keep quotes, corrections and better_answer in English.",
-      "`mistakes` lists up to 8 of the most useful real mistakes quoted from the answers (original -> fixed). `answers` has one entry per question, in order, with a short feedback and a `better_answer`: a natural 2-4 sentence English answer at roughly B2 level built from what the candidate actually said. Do not invent concrete facts; use placeholders like [X%] or [project name] when a detail is missing.",
+      "`mistakes` lists up to 8 of the most useful real mistakes quoted from the answers (original -> fixed). `answers` has one entry per question, in order, with a short feedback and a `better_answer`: a natural 2-4 sentence English answer at roughly B2 level built from what the candidate actually said. Write it ready to say out loud: where the candidate gave no detail, choose concrete, believable ones (for example a number or a project) and never use placeholders, brackets or blanks.",
       anySpoken
         ? "Some answers were dictated with speech recognition: ignore capitalization and punctuation and do not penalize likely transcription errors."
         : "",

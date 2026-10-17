@@ -14,7 +14,7 @@ const help: Help = {
   suggestions: [
     { level: "simple", text: "I am a developer.", translation_es: "Soy desarrollador." },
     { level: "medium", text: "I work as a full stack developer.", translation_es: "Trabajo como desarrollador full stack." },
-    { level: "natural", text: "I'm a full stack developer with [number] years of experience.", translation_es: "Soy desarrollador full stack con [número] años de experiencia." },
+    { level: "natural", text: "I'm a full stack developer with five years of experience.", translation_es: "Soy desarrollador full stack con cinco años de experiencia." },
   ],
 };
 

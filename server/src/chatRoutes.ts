@@ -161,7 +161,7 @@ export function mountChat(app: express.Express, db: DB, deps: ChatDeps = {}) {
       }
     }
     const lvl = level();
-    const cacheKey = `v3:${scenario.id}:${lvl}:${part}`; // bump the prefix when the help shape changes
+    const cacheKey = `v4:${scenario.id}:${lvl}:${part}`; // bump the prefix when the help shape changes
     const isOpener = question === scenario.opener && history.length === 0;
     if (isOpener) {
       const cached = db.prepare("SELECT json FROM help_cache WHERE key = ?").get(cacheKey) as { json: string } | undefined;

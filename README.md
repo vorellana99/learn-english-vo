@@ -68,6 +68,9 @@ and in interview questions. The same icon in the header switches on "always show
 inline instead and is remembered in the browser. Translations of tutor replies, ideas and summaries come from the same
 Claude call as the content; scenario openers and interview questions have hand-written translations.
 
+Suggested answers are written out in full, with concrete believable details (a job title, years of experience, real
+technologies) and never `[brackets]`, so you can say them as they are and edit the details if they are not true for you.
+
 ## Mock interview
 
 Home → "Mock interview": 6 questions (behavioral, technical, system design, recruiter screen or a mix), answered in

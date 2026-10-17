@@ -76,7 +76,17 @@ describe("starter and answers helper (main model)", () => {
     expect(calls.main[0].system).not.toContain("`ideas`");
   });
 
-  it("leaves the tutor's combined help prompt unchanged", () => {
+  it("asks for concrete sentences with no placeholders in every help prompt", async () => {
+    const rest = { starter: "I ...", starter_es: "Yo ...", suggestions: [] };
+    const { client, calls } = fakeClient({ main: () => ok(rest) });
+    await createClaudeHelper(client)(input);
+    for (const prompt of [HELP_INSTRUCTIONS, String(calls.main[0].system)]) {
+      expect(prompt).toContain("never use placeholders, brackets or blanks");
+      expect(prompt).not.toContain("[brackets]");
+    }
+  });
+
+  it("leaves the structure of the tutor's combined help prompt unchanged", () => {
     expect(HELP_INSTRUCTIONS).toContain("`ideas` has 3-5 short English noun phrases");
     expect(HELP_INSTRUCTIONS).toContain("`starter` is the first words");
     expect(HELP_INSTRUCTIONS).toContain("`suggestions` has exactly three English answers");
