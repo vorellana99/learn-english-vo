@@ -1,4 +1,5 @@
 import type { Insights } from "./api";
+import { speak } from "./speech";
 
 const fmtHour = (h: number) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? "am" : "pm"}`;
 
@@ -35,6 +36,19 @@ export function Dashboard({ data }: { data: Insights | null }) {
               <span>{c.count}</span>
             </div>
           ))}
+        </>
+      )}
+      {data.shadowing.hardWords.length > 0 && (
+        <>
+          <h3>Words to practice aloud</h3>
+          <div className="chips">
+            {data.shadowing.hardWords.map((w) => (
+              <button key={w.word} className="chip" title="Listen" onClick={() => speak(w.word, undefined, 0.8)}>
+                🔈 {w.word} <small>×{w.count}</small>
+              </button>
+            ))}
+          </div>
+          <p className="muted">Shadowing average: {data.shadowing.avgScore}% over {data.shadowing.attempts} attempts</p>
         </>
       )}
       {data.weakTopics.length > 0 && (

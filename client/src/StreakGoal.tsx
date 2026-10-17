@@ -33,7 +33,7 @@ export function StreakGoal({ profile, insights }: { profile: Profile; insights: 
           ))}
         </div>
         <div className="goal-row">
-          <span>{pct >= 1 ? "Daily goal reached 🎉" : `Daily goal: ${todayCount}/${DAILY_GOAL} cards`}</span>
+          <span>{pct >= 1 ? "Daily goal reached 🎉" : `Daily goal: ${todayCount}/${DAILY_GOAL} exercises`}</span>
           <div className="xpbar"><div style={{ width: `${pct * 100}%` }} /></div>
         </div>
       </div>

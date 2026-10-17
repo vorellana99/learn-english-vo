@@ -71,6 +71,13 @@ export function openDb(file = process.env.DB_FILE ?? "learn-english.db"): DB {
       answer TEXT,
       spoken INTEGER NOT NULL DEFAULT 0
     );
+    CREATE TABLE IF NOT EXISTS shadow_attempts (
+      id INTEGER PRIMARY KEY,
+      card_id INTEGER NOT NULL REFERENCES cards(id),
+      score INTEGER NOT NULL,
+      missed TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
     INSERT OR IGNORE INTO profile (id) VALUES (1);
   `);
   const insert = db.prepare("INSERT OR IGNORE INTO cards (front, back, level, topic) VALUES (?, ?, ?, ?)");

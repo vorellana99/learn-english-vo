@@ -76,12 +76,12 @@ export function listen(handlers: {
   return { stop: () => rec.stop() };
 }
 
-export function speak(text: string, onEnd?: () => void) {
+export function speak(text: string, onEnd?: () => void, rate = 0.95) {
   if (!canSpeak()) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "en-US";
-  u.rate = 0.95;
+  u.rate = rate;
   const voices = window.speechSynthesis.getVoices();
   const voice = voices.find((v) => v.lang === "en-US" && /natural|google|samantha|aria|jenny/i.test(v.name)) ?? voices.find((v) => v.lang === "en-US");
   if (voice) u.voice = voice;

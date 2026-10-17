@@ -41,6 +41,13 @@ writing or by voice, with no feedback until the end. Claude then evaluates the w
 score, a CEFR estimate, five sub-scores, strengths and improvements (in Spanish), mistakes (saved as review cards) and a
 better answer for each question. XP is awarded once per interview (50 + 1.5 × score).
 
+## Shadowing
+
+Home → "Shadowing": you hear a sentence (slow or normal speed), repeat it out loud, and every word is marked green
+(heard) or red (missed) by comparing your speech with the target text. Each phrase can be retried; the best attempt
+counts (1-10 XP). Words you miss often show up in the dashboard so you can listen to them again. The comparison runs
+in the browser; only the score and missed words are saved.
+
 ## Roadmap
 
 1. **Phase 1 (done):** spaced-repetition flashcards (290 cards A1→B2: work, tech, AI, interview, daily life), XP, streak, level progress A1 → B2, SQLite persistence.

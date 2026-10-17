@@ -1,5 +1,6 @@
 import type { DB } from "./db.js";
 import { LEVELS } from "./progress.js";
+import { shadowingStats } from "./shadowing.js";
 
 export type Mode = "quick" | "normal" | "long";
 
@@ -98,6 +99,7 @@ export function buildInsights(db: DB, tzOffsetMin: number) {
     .prepare(
       `SELECT CAST(strftime('%H', t) AS INTEGER) AS hour, COUNT(*) AS n FROM (
          SELECT reviewed_at AS t FROM reviews
+         UNION ALL SELECT created_at FROM shadow_attempts
          UNION ALL SELECT created_at FROM messages WHERE role = 'user'
        ) GROUP BY hour`,
     )
@@ -111,8 +113,9 @@ export function buildInsights(db: DB, tzOffsetMin: number) {
   const localShift = `${-tzOffsetMin} minutes`;
   const days = db
     .prepare(
-      `SELECT date(reviewed_at, ?) AS day, COUNT(*) AS reviews FROM reviews
-       WHERE reviewed_at >= datetime('now', '-15 days') GROUP BY day ORDER BY day`,
+      `SELECT date(t, ?) AS day, COUNT(*) AS reviews FROM (
+         SELECT reviewed_at AS t FROM reviews UNION ALL SELECT created_at FROM shadow_attempts
+       ) WHERE t >= datetime('now', '-15 days') GROUP BY day ORDER BY day`,
     )
     .all(localShift) as { day: string; reviews: number }[];
 
@@ -139,5 +142,6 @@ export function buildInsights(db: DB, tzOffsetMin: number) {
       .slice(0, 3),
     bestHour,
     activeDays: days,
+    shadowing: shadowingStats(db),
   };
 }

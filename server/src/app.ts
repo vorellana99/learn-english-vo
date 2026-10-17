@@ -7,6 +7,7 @@ import { findScenario, scenarios } from "./scenarios.js";
 import { createClaudeTutor, type Tutor } from "./tutor.js";
 import type { Evaluator } from "./evaluator.js";
 import { mountInterviews } from "./interviewRoutes.js";
+import { mountShadowing } from "./shadowing.js";
 
 // `tz` is the client's Date#getTimezoneOffset (minutes behind UTC), so days roll over at local midnight.
 const tzOf = (v: unknown) => {
@@ -152,6 +153,7 @@ export function createApp(db: DB, tutor?: Tutor, evaluator?: Evaluator) {
   });
 
   mountInterviews(app, db, today, tzOf, evaluator);
+  mountShadowing(app, db, today, tzOf);
 
   return app;
 }

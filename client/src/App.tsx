@@ -3,6 +3,7 @@ import { getProfile, type Mode, type Profile } from "./api";
 import { Review } from "./Review";
 import { Chat } from "./Chat";
 import { Interview } from "./Interview";
+import { Shadowing } from "./Shadowing";
 import { Dashboard } from "./Dashboard";
 import { Hero } from "./Hero";
 import { Roadmap } from "./Roadmap";
@@ -10,7 +11,7 @@ import { StreakGoal, useInsights } from "./StreakGoal";
 import { SoundToggle } from "./SoundToggle";
 import { sound } from "./sound";
 
-type View = "home" | "review" | "chat" | "interview";
+type View = "home" | "review" | "chat" | "interview" | "shadowing";
 
 const MODES: { id: Mode; label: string; hint: string }[] = [
   { id: "quick", label: "Quick", hint: "3 min" },
@@ -89,7 +90,17 @@ export function App() {
                 </div>
                 <button className="primary alt" onClick={() => go("chat")}>Start a mission</button>
               </section>
-              <section className="card action wide-card">
+              <section className="card action">
+                <div className="action-head">
+                  <span className="emoji">🎧</span>
+                  <div>
+                    <h2>Shadowing</h2>
+                    <p className="muted">Listen to a sentence, repeat it out loud and see exactly which words you missed.</p>
+                  </div>
+                </div>
+                <button className="primary alt" onClick={() => go("shadowing")}>Start shadowing</button>
+              </section>
+              <section className="card action">
                 <div className="action-head">
                   <span className="emoji">🎯</span>
                   <div>
@@ -106,6 +117,7 @@ export function App() {
         {profile && view === "review" && <Review mode={mode} level={profile.level} streak={profile.streak} onProgress={setProfile} onDone={home} />}
         {profile && view === "chat" && <Chat onClose={home} />}
         {profile && view === "interview" && <Interview onClose={home} onProgress={refresh} />}
+        {profile && view === "shadowing" && <Shadowing onClose={home} onProgress={refresh} />}
       </main>
     </div>
   );

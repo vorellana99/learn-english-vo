@@ -44,6 +44,7 @@ export interface Insights {
   weakTopics: { topic: string; reviews: number; struggleRate: number }[];
   bestHour: number | null;
   activeDays: { day: string; reviews: number }[];
+  shadowing: { attempts: number; avgScore: number | null; hardWords: { word: string; count: number }[] };
 }
 export const getInsights = () =>
   fetch(`/api/insights?tz=${tz()}`).then((r) => json<Insights>(r));
@@ -114,3 +115,17 @@ export const answerInterview = (id: number, answer: string, spoken: boolean) =>
   post<{ done: boolean; index: number; total: number; question?: string }>(`/api/interview/${id}/answer`, { answer, spoken });
 export const finishInterview = (id: number) =>
   post<{ report: Report; xpAwarded: number } & Profile>(`/api/interview/${id}/finish`, { tz: new Date().getTimezoneOffset() });
+
+export interface Phrase {
+  id: number;
+  front: string;
+  back: string;
+  level: string;
+  topic: string;
+  best: number | null;
+}
+
+export const getShadowingSession = (count = 5) =>
+  fetch(`/api/shadowing/session?count=${count}`).then((r) => json<{ phrases: Phrase[] }>(r));
+export const postShadowingResult = (cardId: number, score: number, missed: string[]) =>
+  post<{ xpAwarded: number } & Profile>("/api/shadowing/result", { cardId, score, missed, tz: new Date().getTimezoneOffset() });

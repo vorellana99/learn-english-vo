@@ -217,3 +217,15 @@ button small { opacity: 0.7; margin-left: 6px; font-weight: 500; }
 .report details { border-top: 1px solid var(--border); padding: 10px 0; }
 .report summary { cursor: pointer; font-weight: 600; }
 .better { background: rgba(34, 211, 238, 0.08); border: 1px solid rgba(34, 211, 238, 0.25); border-radius: 12px; padding: 10px 12px; }
+
+.shadow { display: grid; gap: 14px; max-width: 620px; margin: 0 auto; }
+.shadow-card { text-align: center; display: grid; gap: 10px; padding: 32px 22px 24px; position: relative; background: linear-gradient(160deg, rgba(34, 211, 238, 0.14), var(--surface)); }
+.sentence { font-size: 1.6rem; font-weight: 700; line-height: 1.4; }
+.sentence.blurred { filter: blur(9px); user-select: none; transition: filter 0.2s; }
+.w-ok { color: var(--green); }
+.w-miss { color: var(--rose); text-decoration: underline wavy rgba(251, 113, 133, 0.7); text-underline-offset: 5px; }
+.heard { color: var(--muted); font-style: italic; }
+.shadow-result { display: grid; gap: 4px; }
+.shadow-result strong { font-size: 1.3rem; }
+.shadow-tools { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.chip.big { padding: 12px 18px; font-size: 1rem; }
