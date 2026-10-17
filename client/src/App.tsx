@@ -66,7 +66,7 @@ export function App() {
             <div className="actions">
               <section className="card action">
                 <div className="action-head">
-                  <span className="emoji">🧠</span>
+                  <span className="emoji">🃏</span>
                   <div>
                     <h2>Practice cards</h2>
                     <p className="muted">Spaced repetition adapted to your mistakes.</p>
