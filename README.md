@@ -6,6 +6,9 @@ Gamified English learning web app (A1 → B2) aimed at AI / full stack engineer 
 
 ## Run
 
+Requires Node 22 or newer (tested on 22 and 24; `.nvmrc` pins 24). `better-sqlite3` is a native module: v12+ ships prebuilt
+binaries for Node 24, while v11 had none and needed a C++ build toolchain on your machine.
+
 ```bash
 npm install
 npm run dev   # API on :3001, web on :5173
