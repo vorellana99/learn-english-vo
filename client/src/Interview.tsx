@@ -172,7 +172,7 @@ export function Interview({ onClose, onProgress }: { onClose: () => void; onProg
           <p className="q">{question}</p>
           <div className="mini-actions">
             {canSpeak() && <button className="ghost" onClick={() => speak(question)}>🔈 Repeat question</button>}
-            <Translate es={questionEs} variant="mini" />
+            <Translate es={questionEs} />
           </div>
         </div>
         <textarea

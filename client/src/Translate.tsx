@@ -6,8 +6,6 @@ import { translationPref, useAlwaysTranslate } from "./translation";
 interface Props {
   /** Spanish text. Renders nothing when it is empty (for example old stored data without translations). */
   es?: string;
-  /** "icon" is a round 🌐 button; "mini" matches the small labelled action buttons. */
-  variant?: "icon" | "mini";
   className?: string;
 }
 
@@ -15,9 +13,11 @@ const MARGIN = 8;
 
 /**
  * Reusable translate-to-Spanish control: a 🌐 button that turns a floating bubble on and off.
+ * Project standard: it is always the same icon-only round button (never a text label or a smaller size),
+ * so every place that shows English text uses this component as is.
  * When "always show translations" is on, the translation is shown inline instead and the button is hidden.
  */
-export function Translate({ es, variant = "icon", className = "" }: Props) {
+export function Translate({ es, className = "" }: Props) {
   const always = useAlwaysTranslate();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -69,7 +69,7 @@ export function Translate({ es, variant = "icon", className = "" }: Props) {
       <button
         ref={button}
         type="button"
-        className={`${variant === "mini" ? "mini" : "tr-btn"} ${open ? "on" : ""} ${className}`}
+        className={`tr-btn ${open ? "on" : ""} ${className}`}
         aria-pressed={open}
         aria-label={open ? "Hide Spanish translation" : "Show Spanish translation"}
         title={open ? "Hide translation" : "Translate to Spanish"}
@@ -78,7 +78,7 @@ export function Translate({ es, variant = "icon", className = "" }: Props) {
           setOpen((o) => !o);
         }}
       >
-        🌐{variant === "mini" && " Spanish"}
+        🌐
       </button>
       {open &&
         createPortal(

@@ -91,7 +91,7 @@ export function MissionSummary({ data, onRetryNoHelp, onMissions, onHome }: Prop
             <p className="yours">{r.yours}</p>
             <p className="better">{r.better}</p>
             <div className="mini-actions">
-              <Translate es={r.better_es} variant="mini" />
+              <Translate es={r.better_es} />
               {canSpeak() && <button className="mini" onClick={() => speak(r.better)}>🔈 Listen</button>}
               <button className="mini" disabled={saved.has(r.better)} onClick={() => void save(r.better, r.yours)}>
                 {saved.has(r.better) ? "✓ Saved" : "💾 Save"}

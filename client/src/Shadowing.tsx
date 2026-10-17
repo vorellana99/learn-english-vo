@@ -179,7 +179,7 @@ export function Shadowing({ onClose, onProgress }: { onClose: () => void; onProg
         ) : (
           <p className={`sentence ${hideText && !listening ? "blurred" : ""}`}>{phrase.front}</p>
         )}
-        <div className="center-tr"><Translate es={phrase.back} variant="mini" /></div>
+        <div className="center-tr"><Translate es={phrase.back} /></div>
         {!attempt && listening && <p className="heard">{heard || "Listening…"}</p>}
         {attempt && (
           <div className="shadow-result">

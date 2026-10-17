@@ -135,7 +135,7 @@ export function HelpPanel({ help, loading, error, level, open, onToggle, onRevea
                           {live && <p className="heard">{heard || "Listening…"}</p>}
                           {result && !live && <p className="muted">🎯 {result.score}% match</p>}
                           <div className="mini-actions">
-                            <Translate es={s.translation_es} variant="mini" />
+                            <Translate es={s.translation_es} />
                             <button className="mini" onClick={() => onUse(s.text)}>✏️ Use</button>
                             {canSpeak() && <button className="mini" aria-label="Listen" onClick={() => speak(s.text)}>🔈 Listen</button>}
                             {canListen() && (
